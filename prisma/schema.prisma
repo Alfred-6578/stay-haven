@@ -1,0 +1,408 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── ENUMS ──────────────────────────────────────────────
+
+enum UserRole {
+  GUEST
+  STAFF
+  MANAGER
+  ADMIN
+}
+
+enum StaffDepartment {
+  FRONT_DESK
+  HOUSEKEEPING
+  MANAGEMENT
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  CLEANING
+  MAINTENANCE
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentType {
+  BOOKING
+  EXTENSION
+  UPGRADE
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  CHECK_IN_REMINDER
+  OVERSTAY_WARNING
+  PAYMENT_SUCCESS
+  ROOM_SERVICE_UPDATE
+  POINTS_EARNED
+  UPGRADE_APPROVED
+  EXTENSION_APPROVED
+  GENERAL
+}
+
+enum ServiceCategory {
+  FOOD
+  BEVERAGE
+  LAUNDRY
+  SPA
+  TRANSPORT
+  OTHER
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  DELIVERED
+  CANCELLED
+}
+
+enum LoyaltyTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ─── MODELS ─────────────────────────────────────────────
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  passwordHash     String?
+  firstName        String
+  lastName         String
+  phone            String?
+  avatar           String?
+  role             UserRole  @default(GUEST)
+  isActive         Boolean   @default(true)
+  isDeleted        Boolean   @default(false)
+  inviteToken      String?   @unique
+  inviteExpiresAt  DateTime?
+  resetToken       String?
+  resetExpiresAt   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  guestProfile        GuestProfile?
+  staffProfile        StaffProfile?
+  bookings            Booking[]            @relation("GuestBookings")
+  notifications       Notification[]
+  sentInvites         InviteRecord[]
+  processedCheckins   Booking[]            @relation("CheckedInBy")
+  pendingPayments     PendingPayment[]
+  roomServiceOrders   RoomServiceOrder[]
+  serviceBookings     ServiceBooking[]
+  loyaltyTransactions LoyaltyTransaction[]
+  processedUpgrades   RoomUpgradeRequest[]
+}
+
+model GuestProfile {
+  id             String     @id @default(cuid())
+  userId         String     @unique
+  idType         String?
+  idNumber       String?
+  dateOfBirth    DateTime?
+  nationality    String?
+  address        String?
+  preferences    Json       @default("{}")
+  loyaltyTier    LoyaltyTier @default(BRONZE)
+  totalPoints    Int        @default(0)
+  lifetimePoints Int        @default(0)
+  totalStays     Int        @default(0)
+  totalSpend     Decimal    @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model StaffProfile {
+  id          String          @id @default(cuid())
+  userId      String          @unique
+  staffNumber String          @unique
+  department  StaffDepartment
+  isOnDuty    Boolean         @default(false)
+  hiredAt     DateTime
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model RoomType {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  slug              String   @unique
+  description       String
+  capacity          Int
+  amenities         String[]
+  basePrice         Decimal
+  weekendMultiplier Decimal  @default(1.0)
+  images            String[]
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  rooms           Room[]
+  upgradeRequests RoomUpgradeRequest[]
+}
+
+model Room {
+  id         String     @id @default(cuid())
+  number     String     @unique
+  floor      Int
+  roomTypeId String
+  status     RoomStatus @default(AVAILABLE)
+  notes      String?
+  isActive   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  roomType        RoomType             @relation(fields: [roomTypeId], references: [id])
+  bookings        Booking[]
+  upgradeRequests RoomUpgradeRequest[]
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  bookingRef      String        @unique
+  guestId         String
+  roomId          String
+  checkIn         DateTime
+  checkOut        DateTime
+  adults          Int           @default(1)
+  children        Int           @default(0)
+  totalNights     Int
+  baseAmount      Decimal
+  discountAmount  Decimal       @default(0)
+  taxAmount       Decimal
+  totalAmount     Decimal
+  pointsUsed      Int           @default(0)
+  status          BookingStatus @default(PENDING)
+  specialRequests String?
+  checkInAt       DateTime?
+  checkOutAt      DateTime?
+  checkedInById   String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  guest              User                @relation("GuestBookings", fields: [guestId], references: [id])
+  room               Room                @relation(fields: [roomId], references: [id])
+  checkedInBy        User?               @relation("CheckedInBy", fields: [checkedInById], references: [id])
+  payment            Payment?
+  notifications      Notification[]
+  roomServiceOrders  RoomServiceOrder[]
+  serviceBookings    ServiceBooking[]
+  upgradeRequest     RoomUpgradeRequest?
+  stayExtension      StayExtension?
+  loyaltyTransactions LoyaltyTransaction[]
+
+  @@index([guestId])
+  @@index([status])
+  @@index([checkIn, checkOut])
+}
+
+model Payment {
+  id           String        @id @default(cuid())
+  bookingId    String?       @unique
+  reference    String        @unique
+  amount       Decimal
+  currency     String        @default("NGN")
+  type         PaymentType
+  status       PaymentStatus @default(PENDING)
+  paystackData Json?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  booking Booking? @relation(fields: [bookingId], references: [id])
+}
+
+model PendingPayment {
+  id        String   @id @default(cuid())
+  reference String   @unique
+  userId    String
+  type      String
+  data      Json
+  amount    Decimal
+  status    String   @default("pending")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([reference])
+}
+
+model InviteRecord {
+  id          String          @id @default(cuid())
+  email       String
+  token       String          @unique
+  role        UserRole
+  department  StaffDepartment?
+  invitedById String
+  usedAt      DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime        @default(now())
+
+  invitedBy User @relation(fields: [invitedById], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  metadata  Json?
+  bookingId String?
+  createdAt DateTime         @default(now())
+
+  user    User     @relation(fields: [userId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+model ServiceMenuItem {
+  id          String          @id @default(cuid())
+  name        String
+  description String
+  price       Decimal
+  category    ServiceCategory
+  image       String?
+  isAvailable Boolean         @default(true)
+  prepMinutes Int             @default(20)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model RoomServiceOrder {
+  id           String      @id @default(cuid())
+  bookingId    String
+  guestId      String
+  items        Json
+  totalAmount  Decimal
+  status       OrderStatus @default(PENDING)
+  instructions String?
+  estimatedAt  DateTime?
+  deliveredAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+  guest   User    @relation(fields: [guestId], references: [id])
+
+  @@index([bookingId])
+  @@index([status])
+}
+
+model HotelService {
+  id          String          @id @default(cuid())
+  name        String
+  description String
+  price       Decimal
+  category    ServiceCategory
+  image       String?
+  isAvailable Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  serviceBookings ServiceBooking[]
+}
+
+model ServiceBooking {
+  id          String        @id @default(cuid())
+  bookingId   String
+  guestId     String
+  serviceId   String
+  scheduledAt DateTime
+  amount      Decimal
+  status      RequestStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime      @default(now())
+
+  booking Booking      @relation(fields: [bookingId], references: [id])
+  guest   User         @relation(fields: [guestId], references: [id])
+  service HotelService @relation(fields: [serviceId], references: [id])
+
+  @@index([bookingId])
+}
+
+model LoyaltyTransaction {
+  id          String   @id @default(cuid())
+  guestId     String
+  points      Int
+  type        String
+  description String
+  bookingId   String?
+  createdAt   DateTime @default(now())
+
+  guest   User     @relation(fields: [guestId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([guestId])
+}
+
+model RoomUpgradeRequest {
+  id               String        @id @default(cuid())
+  bookingId        String        @unique
+  currentRoomId    String
+  requestedTypeId  String
+  priceDifference  Decimal
+  paymentReference String?
+  status           RequestStatus @default(PENDING)
+  processedById    String?
+  processedAt      DateTime?
+  createdAt        DateTime      @default(now())
+
+  booking       Booking  @relation(fields: [bookingId], references: [id])
+  currentRoom   Room     @relation(fields: [currentRoomId], references: [id])
+  requestedType RoomType @relation(fields: [requestedTypeId], references: [id])
+  processedBy   User?    @relation(fields: [processedById], references: [id])
+}
+
+model StayExtension {
+  id               String        @id @default(cuid())
+  bookingId        String        @unique
+  originalCheckOut DateTime
+  newCheckOut      DateTime
+  additionalNights Int
+  additionalAmount Decimal
+  paymentReference String?
+  status           RequestStatus @default(PENDING)
+  createdAt        DateTime      @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+}
