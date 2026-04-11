@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 
 const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@stayhaven.com";
 const FROM_NAME = process.env.FROM_NAME || "StayHaven";
@@ -7,7 +8,7 @@ const LOGO_URL = `${CLIENT_URL}/logo.png`;
 
 function createTransporter(): nodemailer.Transporter | null {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
-  return nodemailer.createTransport({
+  const opts: SMTPTransport.Options = {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT) || 587,
     secure: false,
@@ -15,8 +16,8 @@ function createTransporter(): nodemailer.Transporter | null {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    pool: false,
-  });
+  };
+  return nodemailer.createTransport(opts);
 }
 
 interface SendEmailOptions {
