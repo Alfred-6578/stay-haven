@@ -45,7 +45,8 @@ api.interceptors.response.use(
       originalRequest._retry ||
       originalRequest.url?.includes("/auth/refresh") ||
       originalRequest.url?.includes("/auth/login") ||
-      originalRequest.url?.includes("/auth/register")
+      originalRequest.url?.includes("/auth/register") ||
+      originalRequest.url?.includes("/auth/me")
     ) {
       return Promise.reject(error);
     }
@@ -69,7 +70,9 @@ api.interceptors.response.use(
       processQueue(refreshError);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("auth:logout"));
-        window.location.href = "/login";
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
       }
       return Promise.reject(refreshError);
     } finally {
