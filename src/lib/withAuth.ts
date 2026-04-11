@@ -11,17 +11,21 @@ export interface AuthUser {
   isActive: boolean;
 }
 
-type AuthenticatedHandler = (
+export type RouteContext<P = Record<string, string>> = {
+  params: Promise<P>;
+};
+
+type AuthenticatedHandler<P = Record<string, string>> = (
   req: NextRequest,
-  context: { params?: Record<string, string> },
+  context: RouteContext<P>,
   user: AuthUser
 ) => Promise<Response>;
 
-export function withAuth(handler: AuthenticatedHandler, roles?: string[]) {
-  return async (
-    req: NextRequest,
-    context: { params?: Record<string, string> }
-  ) => {
+export function withAuth<P = Record<string, string>>(
+  handler: AuthenticatedHandler<P>,
+  roles?: string[]
+) {
+  return async (req: NextRequest, context: RouteContext<P>) => {
     const token = getAccessToken(req);
 
     if (!token) {
