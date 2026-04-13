@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../../src";
 
 :root {
   --background: #ffffff;
@@ -70,3 +71,68 @@ body {
   color: var(--foreground);
   font-family: 'Outfit', sans-serif;
 }
+
+/* ─── Hero entrance animations ─────────────────────── */
+
+@keyframes heroFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes heroScaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes heroKenBurns {
+  0% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-hero-ken-burns {
+  animation: heroKenBurns 12s ease-out forwards;
+}
+
+.animate-hero-fade-in {
+  opacity: 0;
+  animation: heroFadeIn 0.9s ease-out forwards;
+}
+
+.animate-hero-fade-up {
+  opacity: 0;
+  animation: heroFadeUp 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-hero-scale-in {
+  opacity: 0;
+  animation: heroScaleIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.hero-delay-1 { animation-delay: 0.1s; }
+.hero-delay-2 { animation-delay: 0.25s; }
+.hero-delay-3 { animation-delay: 0.4s; }
+.hero-delay-4 { animation-delay: 0.55s; }
+.hero-delay-5 { animation-delay: 0.7s; }
+.hero-delay-6 { animation-delay: 0.85s; }
+.hero-delay-7 { animation-delay: 1s; }
