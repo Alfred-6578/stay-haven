@@ -48,90 +48,189 @@ async function main() {
 
   // ─── Room Types ───────────────────────────────────────
 
-  const standard = await prisma.roomType.upsert({
-    where: { slug: "standard" },
-    update: {},
-    create: {
+  const roomTypeData = [
+    {
       name: "Standard",
       slug: "standard",
-      description:
-        "Comfortable and well-appointed room with all essential amenities for a pleasant stay.",
+      tag: "Best Value",
+      description: "Comfortable and well-appointed room with all essential amenities for a pleasant stay.",
       capacity: 2,
       amenities: ["WiFi", "AC", "TV", "Mini-fridge"],
       basePrice: 80,
       weekendMultiplier: 1.0,
-      images: [],
+      image: "/room_2.jpeg",
     },
-  });
-
-  const deluxe = await prisma.roomType.upsert({
-    where: { slug: "deluxe" },
-    update: {},
-    create: {
+    {
+      name: "Superior",
+      slug: "superior",
+      tag: "Business Friendly",
+      description: "A step above standard with extra space, upgraded furnishings, and a work desk for business travelers.",
+      capacity: 2,
+      amenities: ["WiFi", "AC", "Smart TV", "Mini-fridge", "Work desk", "Coffee maker"],
+      basePrice: 110,
+      weekendMultiplier: 1.1,
+      image: "/room_3.jpeg",
+    },
+    {
       name: "Deluxe",
       slug: "deluxe",
-      description:
-        "Spacious and elegantly furnished room with premium amenities and stunning city views.",
+      tag: "Most Popular",
+      description: "Spacious and elegantly furnished room with premium amenities and stunning city views.",
       capacity: 2,
-      amenities: [
-        "WiFi",
-        "AC",
-        "Smart TV",
-        "Mini-bar",
-        "City view",
-        "Bathtub",
-      ],
+      amenities: ["WiFi", "AC", "Smart TV", "Mini-bar", "City view", "Bathtub"],
       basePrice: 150,
       weekendMultiplier: 1.2,
-      images: [],
+      image: "/room_4.jpg",
     },
-  });
-
-  const suite = await prisma.roomType.upsert({
-    where: { slug: "presidential-suite" },
-    update: {},
-    create: {
+    {
+      name: "Premium",
+      slug: "premium",
+      tag: "Garden View",
+      description: "Luxurious room featuring a king-size bed, rain shower, and a private balcony overlooking the garden.",
+      capacity: 2,
+      amenities: ["WiFi", "AC", "Smart TV", "Mini-bar", "Balcony", "Rain shower", "Bathrobes"],
+      basePrice: 200,
+      weekendMultiplier: 1.2,
+      image: "/room_5.jpeg",
+    },
+    {
+      name: "Junior Suite",
+      slug: "junior-suite",
+      tag: "Extended Stay",
+      description: "Open-plan suite with a separate sitting area, ideal for extended stays and unwinding in style.",
+      capacity: 3,
+      amenities: ["WiFi", "AC", "Smart TV", "Mini-bar", "Sitting area", "Bathtub", "City view"],
+      basePrice: 250,
+      weekendMultiplier: 1.3,
+      image: "/room_6.jpeg",
+    },
+    {
+      name: "Executive Suite",
+      slug: "executive-suite",
+      tag: "Lounge Access",
+      description: "Separate living room and bedroom with executive lounge access and complimentary breakfast.",
+      capacity: 3,
+      amenities: ["WiFi", "AC", "Smart TV", "Full bar", "Lounge access", "Bathtub", "Work desk", "Breakfast included"],
+      basePrice: 320,
+      weekendMultiplier: 1.3,
+      image: "/room_7.jpeg",
+    },
+    {
       name: "Presidential Suite",
       slug: "presidential-suite",
-      description:
-        "The ultimate luxury experience with exclusive amenities, private terrace, and dedicated butler service.",
+      tag: "Ultimate Luxury",
+      description: "The ultimate luxury experience with exclusive amenities, private terrace, and dedicated butler service.",
       capacity: 4,
-      amenities: [
-        "WiFi",
-        "AC",
-        "Smart TV",
-        "Full bar",
-        "Private terrace",
-        "Jacuzzi",
-        "Butler service",
-      ],
+      amenities: ["WiFi", "AC", "Smart TV", "Full bar", "Private terrace", "Jacuzzi", "Butler service"],
       basePrice: 400,
       weekendMultiplier: 1.5,
-      images: [],
+      image: "/room_8.jpeg",
     },
-  });
+    {
+      name: "Penthouse",
+      slug: "penthouse",
+      tag: "Top Floor",
+      description: "Top-floor penthouse with panoramic skyline views, private dining area, and a grand living space.",
+      capacity: 4,
+      amenities: ["WiFi", "AC", "Smart TV", "Full bar", "Panoramic view", "Private dining", "Jacuzzi", "Butler service", "Grand piano"],
+      basePrice: 600,
+      weekendMultiplier: 1.5,
+      image: "/room_9.jpeg",
+    },
+    {
+      name: "Family Room",
+      slug: "family-room",
+      tag: "Kid Friendly",
+      description: "Thoughtfully designed for families with connecting rooms, kid-friendly amenities, and extra beds.",
+      capacity: 4,
+      amenities: ["WiFi", "AC", "TV", "Mini-fridge", "Extra beds", "Kid-friendly", "Connecting rooms"],
+      basePrice: 180,
+      weekendMultiplier: 1.1,
+      image: "/room_10.jpeg",
+    },
+    {
+      name: "Twin Room",
+      slug: "twin-room",
+      tag: "Shared Stay",
+      description: "Two single beds in a well-furnished room — perfect for friends or colleagues traveling together.",
+      capacity: 2,
+      amenities: ["WiFi", "AC", "TV", "Mini-fridge", "Work desk"],
+      basePrice: 90,
+      weekendMultiplier: 1.0,
+      image: "/room_11.jpeg",
+    },
+    {
+      name: "Honeymoon Suite",
+      slug: "honeymoon-suite",
+      tag: "Romantic Escape",
+      description: "Romantic retreat with rose petal turndown, champagne on arrival, couples spa access, and a sunset balcony.",
+      capacity: 2,
+      amenities: ["WiFi", "AC", "Smart TV", "Mini-bar", "Balcony", "Jacuzzi", "Couples spa", "Champagne"],
+      basePrice: 350,
+      weekendMultiplier: 1.4,
+      image: "/room_12.jpeg",
+    },
+    {
+      name: "Accessible Room",
+      slug: "accessible-room",
+      tag: "Fully Accessible",
+      description: "Fully accessible room with wider doorways, roll-in shower, grab bars, and lowered fixtures for comfort.",
+      capacity: 2,
+      amenities: ["WiFi", "AC", "TV", "Mini-fridge", "Roll-in shower", "Grab bars", "Emergency pull cord"],
+      basePrice: 85,
+      weekendMultiplier: 1.0,
+      image: "/room_13.jpeg",
+    },
+  ];
 
-  console.log("Created room types:", {
-    standard: standard.name,
-    deluxe: deluxe.name,
-    suite: suite.name,
-  });
+  const createdTypes: Array<{ id: string; slug: string; name: string }> = [];
+  for (const rt of roomTypeData) {
+    const created = await prisma.roomType.upsert({
+      where: { slug: rt.slug },
+      update: { tag: rt.tag, image: rt.image },
+      create: { ...rt, images: [] },
+    });
+    createdTypes.push(created);
+  }
+
+  console.log(`Created ${createdTypes.length} room types`);
 
   // ─── Rooms ────────────────────────────────────────────
 
+  // Map: floor 1 = Standard, Superior, Twin, Accessible (budget tier)
+  // floor 2 = Deluxe, Premium, Family (mid tier)
+  // floor 3 = Junior Suite, Executive Suite, Honeymoon Suite (upper tier)
+  // floor 4 = Presidential Suite, Penthouse (top tier)
+
+  const typeBySlug = (slug: string) => createdTypes.find(t => t.slug === slug)!;
+
   const roomConfigs = [
-    { number: "101", floor: 1, roomTypeId: standard.id },
-    { number: "102", floor: 1, roomTypeId: standard.id },
-    { number: "103", floor: 1, roomTypeId: standard.id },
-    { number: "104", floor: 1, roomTypeId: standard.id },
-    { number: "201", floor: 2, roomTypeId: deluxe.id },
-    { number: "202", floor: 2, roomTypeId: deluxe.id },
-    { number: "203", floor: 2, roomTypeId: deluxe.id },
-    { number: "204", floor: 2, roomTypeId: deluxe.id },
-    { number: "301", floor: 3, roomTypeId: suite.id },
-    { number: "302", floor: 3, roomTypeId: suite.id },
-    { number: "303", floor: 3, roomTypeId: suite.id },
-    { number: "304", floor: 3, roomTypeId: suite.id },
+    // Floor 1
+    { number: "101", floor: 1, roomTypeId: typeBySlug("standard").id },
+    { number: "102", floor: 1, roomTypeId: typeBySlug("standard").id },
+    { number: "103", floor: 1, roomTypeId: typeBySlug("superior").id },
+    { number: "104", floor: 1, roomTypeId: typeBySlug("superior").id },
+    { number: "105", floor: 1, roomTypeId: typeBySlug("twin-room").id },
+    { number: "106", floor: 1, roomTypeId: typeBySlug("accessible-room").id },
+    // Floor 2
+    { number: "201", floor: 2, roomTypeId: typeBySlug("deluxe").id },
+    { number: "202", floor: 2, roomTypeId: typeBySlug("deluxe").id },
+    { number: "203", floor: 2, roomTypeId: typeBySlug("premium").id },
+    { number: "204", floor: 2, roomTypeId: typeBySlug("premium").id },
+    { number: "205", floor: 2, roomTypeId: typeBySlug("family-room").id },
+    { number: "206", floor: 2, roomTypeId: typeBySlug("family-room").id },
+    // Floor 3
+    { number: "301", floor: 3, roomTypeId: typeBySlug("junior-suite").id },
+    { number: "302", floor: 3, roomTypeId: typeBySlug("junior-suite").id },
+    { number: "303", floor: 3, roomTypeId: typeBySlug("executive-suite").id },
+    { number: "304", floor: 3, roomTypeId: typeBySlug("executive-suite").id },
+    { number: "305", floor: 3, roomTypeId: typeBySlug("honeymoon-suite").id },
+    { number: "306", floor: 3, roomTypeId: typeBySlug("honeymoon-suite").id },
+    // Floor 4
+    { number: "401", floor: 4, roomTypeId: typeBySlug("presidential-suite").id },
+    { number: "402", floor: 4, roomTypeId: typeBySlug("presidential-suite").id },
+    { number: "403", floor: 4, roomTypeId: typeBySlug("penthouse").id },
+    { number: "404", floor: 4, roomTypeId: typeBySlug("penthouse").id },
   ];
 
   for (const config of roomConfigs) {
@@ -142,7 +241,7 @@ async function main() {
     });
   }
 
-  console.log("Created 12 rooms (101-104, 201-204, 301-304)");
+  console.log(`Created ${roomConfigs.length} rooms across 4 floors`);
 
   // ─── Service Menu Items ───────────────────────────────
 

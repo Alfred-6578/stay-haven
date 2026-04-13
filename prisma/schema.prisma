@@ -163,11 +163,13 @@ model RoomType {
   id                String   @id @default(cuid())
   name              String   @unique
   slug              String   @unique
+  tag               String?
   description       String
   capacity          Int
   amenities         String[]
   basePrice         Decimal
   weekendMultiplier Decimal  @default(1.0)
+  image             String?
   images            String[]
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())

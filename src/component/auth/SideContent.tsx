@@ -1,6 +1,7 @@
 'use client'
 import React from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 const SideContent = ({
     children
@@ -9,10 +10,10 @@ const SideContent = ({
 }) => {
   return (
     <div className='flex flex-col justify-between bg-accent h-full p-12 max-lg:hidden'>
-        <div className="flex gap-3 items-center ">
+        <Link href={'/'} className="flex gap-3 items-center ">
             <Image src={require('@/assets/logo-inverted.png')} alt='logo' className='w-13 h-13' />
             <p className='font-body font-bold text-[26px]'>StayHaven</p>
-        </div>
+        </Link>
         <div className="">
             {children}
         </div>
