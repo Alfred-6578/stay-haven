@@ -129,6 +129,31 @@ body {
   animation: heroScaleIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* Modal / dialog animations */
+@keyframes modalBackdropIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes modalContentIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-modal-backdrop {
+  animation: modalBackdropIn 0.2s ease-out forwards;
+}
+
+.animate-modal-content {
+  animation: modalContentIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
 .hero-delay-1 { animation-delay: 0.1s; }
 .hero-delay-2 { animation-delay: 0.25s; }
 .hero-delay-3 { animation-delay: 0.4s; }

@@ -10,6 +10,7 @@ import Button from './Button'
 import { useAuth } from '@/context/AuthContext'
 import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
 import NotificationBell from '@/component/guest/NotificationBell'
+import ConfirmModal from '@/component/ui/ConfirmModal'
 
 const navLinks = [
     { href: '/', label: 'Home' },
@@ -27,9 +28,22 @@ const guestLinks = [
 
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = React.useState(false)
+    const [confirmOpen, setConfirmOpen] = React.useState(false)
+    const [signingOut, setSigningOut] = React.useState(false)
     const { user, loading, logout } = useAuth()
 
     const toggleMenu = () => setIsMenuOpen(!isMenuOpen)
+
+    const handleSignOut = async () => {
+        setSigningOut(true)
+        try {
+            await logout()
+        } finally {
+            setSigningOut(false)
+            setConfirmOpen(false)
+            setIsMenuOpen(false)
+        }
+    }
 
     const isLoggedIn = !loading && !!user
 
@@ -148,7 +162,7 @@ const Navbar = () => {
                                 Book Now
                             </Button>
                             <button
-                                onClick={() => { logout(); setIsMenuOpen(false) }}
+                                onClick={() => setConfirmOpen(true)}
                                 className="flex items-center justify-center gap-2 px-5 py-2 rounded-full border border-danger/30 text-danger text-sm font-medium hover:bg-danger-bg transition-colors"
                             >
                                 <HiOutlineLogout size={16} />
@@ -167,6 +181,17 @@ const Navbar = () => {
                     </div>
                 )}
             </nav>
+
+            <ConfirmModal
+                open={confirmOpen}
+                title="Sign out?"
+                message="You'll need to sign back in to access your bookings and account."
+                confirmLabel="Sign Out"
+                variant="danger"
+                loading={signingOut}
+                onConfirm={handleSignOut}
+                onCancel={() => setConfirmOpen(false)}
+            />
         </div>
     )
 }
