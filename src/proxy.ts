@@ -9,7 +9,7 @@ const AUTH_PATHS = [
   "/invite",
 ];
 
-const STAFF_ROLES = new Set(["STAFF", "MANAGER", "ADMIN"]);
+const STAFF_ROLES = new Set(["STAFF", "MANAGER"]);
 
 /**
  * Edge-compatible base64url decode for JWT payload.
@@ -45,9 +45,12 @@ export function proxy(request: NextRequest) {
   }
 
   const payload = decodeJwtPayload(refreshToken);
-  const isStaff = payload?.role && STAFF_ROLES.has(payload.role);
+  const role = payload?.role;
 
-  const dest = isStaff ? "/staff/dashboard" : "/dashboard";
+  let dest = "/dashboard";
+  if (role === "ADMIN") dest = "/admin/dashboard";
+  else if (role && STAFF_ROLES.has(role)) dest = "/staff/dashboard";
+
   return NextResponse.redirect(new URL(dest, request.url));
 }
 
