@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         roomType: {
           isActive: true,
           capacity: { gte: adults },
-          ...(typeId ? { id: typeId } : {}),
+          ...(typeId ? { OR: [{ id: typeId }, { slug: typeId }] } : {}),
         },
       },
       include: { roomType: true },
