@@ -24,6 +24,8 @@ const LoginForm = () => {
     const navigateAfterAuth = (role: string) => {
         if (redirect) {
             router.push(redirect)
+        } else if (role === 'ADMIN' || role === 'MANAGER' || role === 'STAFF') {
+            router.push('/staff/dashboard')
         } else {
             router.push('/dashboard')
         }

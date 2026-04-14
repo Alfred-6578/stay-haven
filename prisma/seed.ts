@@ -12,6 +12,7 @@ async function main() {
 
   const adminPassword = await bcrypt.hash("Admin@123", 12);
   const managerPassword = await bcrypt.hash("Manager@123", 12);
+  const staffPassword = await bcrypt.hash("Staff@123", 12);
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@stayhaven.com" },
@@ -44,7 +45,27 @@ async function main() {
     },
   });
 
-  console.log("Created users:", { admin: admin.email, manager: manager.email });
+  const staff = await prisma.user.upsert({
+    where: { email: "staff@stayhaven.com" },
+    update: {},
+    create: {
+      email: "staff@stayhaven.com",
+      passwordHash: staffPassword,
+      firstName: "Front",
+      lastName: "Desk",
+      role: "STAFF",
+      staffProfile: {
+        create: {
+          staffNumber: "STF-002",
+          department: "FRONT_DESK",
+          isOnDuty: true,
+          hiredAt: new Date(),
+        },
+      },
+    },
+  });
+
+  console.log("Created users:", { admin: admin.email, manager: manager.email, staff: staff.email });
 
   // ─── Room Types ───────────────────────────────────────
 
