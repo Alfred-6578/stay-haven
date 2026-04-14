@@ -59,7 +59,13 @@ export const GET = withAuth(
                 email: true,
               },
             },
-            room: { select: { number: true, floor: true } },
+            room: {
+              select: {
+                number: true,
+                floor: true,
+                roomType: { select: { name: true } },
+              },
+            },
             payment: { select: { status: true, amount: true, reference: true } },
           },
           orderBy: { createdAt: "desc" },
