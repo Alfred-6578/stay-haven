@@ -6,6 +6,8 @@ import { CiLock } from 'react-icons/ci'
 import { HiOutlineMail } from 'react-icons/hi'
 import { IoEyeOffOutline, IoEyeOutline } from 'react-icons/io5'
 import { useAuth } from '@/context/AuthContext'
+import { useGoogleLogin } from '@react-oauth/google'
+import { FcGoogle } from 'react-icons/fc'
 
 const LoginForm = () => {
     const [showPassword, setShowPassword] = useState(false)
@@ -13,10 +15,19 @@ const LoginForm = () => {
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
-    const { login } = useAuth()
+    const [googleLoading, setGoogleLoading] = useState(false)
+    const { login, googleLogin } = useAuth()
     const router = useRouter()
     const searchParams = useSearchParams()
     const redirect = searchParams.get('redirect')
+
+    const navigateAfterAuth = (role: string) => {
+        if (redirect) {
+            router.push(redirect)
+        } else {
+            router.push('/dashboard')
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -25,22 +36,7 @@ const LoginForm = () => {
 
         try {
             const user = await login(email, password)
-
-            if (redirect) {
-                router.push(redirect)
-            } else {
-                switch (user.role) {
-                    case 'ADMIN':
-                        router.push('/dashboard')
-                        break
-                    case 'MANAGER':
-                    case 'STAFF':
-                        router.push('/dashboard')
-                        break
-                    default:
-                        router.push('/dashboard')
-                }
-            }
+            navigateAfterAuth(user.role)
         } catch (err: unknown) {
             const message =
                 (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -50,6 +46,27 @@ const LoginForm = () => {
             setLoading(false)
         }
     }
+
+    const handleGoogleLogin = useGoogleLogin({
+        onSuccess: async (response) => {
+            setError('')
+            setGoogleLoading(true)
+            try {
+                const user = await googleLogin({ accessToken: response.access_token })
+                navigateAfterAuth(user.role)
+            } catch (err: unknown) {
+                const message =
+                    (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+                    'Google sign-in failed'
+                setError(message)
+            } finally {
+                setGoogleLoading(false)
+            }
+        },
+        onError: () => {
+            setError('Google sign-in was cancelled')
+        },
+    })
 
     return (
         <div className='w-full'>
@@ -65,6 +82,28 @@ const LoginForm = () => {
                     {error}
                 </div>
             )}
+
+            {/* Google Sign-In */}
+            <button
+                type="button"
+                onClick={() => handleGoogleLogin()}
+                disabled={googleLoading || loading}
+                className="flex items-center justify-center gap-3 w-full border border-border rounded-md py-3 font-medium text-sm text-foreground hover:bg-foreground-disabled/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {googleLoading ? (
+                    <div className="w-5 h-5 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+                ) : (
+                    <FcGoogle size={20} />
+                )}
+                {googleLoading ? 'Signing in...' : 'Continue with Google'}
+            </button>
+
+            <div className="w-full flex items-center my-6 gap-3">
+                <div className="h-[0.5px] w-[49%] bg-border"></div>
+                <p className="text-border-strong text-sm">or</p>
+                <div className="h-[0.5px] w-[49%] bg-border"></div>
+            </div>
+
             <form onSubmit={handleSubmit} className="">
                 <div className="flex flex-col gap-2 mb-4">
                     <label htmlFor="email" className="text-foreground text-sm font-medium">
@@ -116,20 +155,13 @@ const LoginForm = () => {
                 </div>
                 <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || googleLoading}
                     className="bg-foreground text-background w-full rounded-md py-3 mt-6 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Signing in...' : 'Sign In'}
                 </button>
             </form>
             <div className="">
-                <div className="w-full flex items-center my-6 gap-3">
-                    <div className="h-[0.5px] w-[49%] bg-border"></div>
-                    <p className="text-border-strong text-sm">
-                        or
-                    </p>
-                    <div className="h-[0.5px] w-[49%] bg-border"></div>
-                </div>
                 <p className="text-foreground-secondary text-sm mt-6 text-center">
                     Don&apos;t have an account? <Link href="/register" className="text-foreground font-medium hover:underline">Sign up</Link>
                 </p>

@@ -132,7 +132,7 @@ function ConfirmedContent() {
               View Booking
             </Button>
           )}
-          <Button href="/" withArrow>
+          <Button href="/dashboard" withArrow>
             Back to Home
           </Button>
         </div>

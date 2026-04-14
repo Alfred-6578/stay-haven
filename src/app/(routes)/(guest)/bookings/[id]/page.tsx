@@ -1,0 +1,277 @@
+'use client'
+import React, { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Image from 'next/image'
+import Link from 'next/link'
+import { api } from '@/lib/api'
+import Button from '@/component/ui/Button'
+import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
+import { HiOutlineCalendar, HiOutlineUsers, HiOutlineArrowLeft } from 'react-icons/hi'
+import { MdOutlineKingBed } from 'react-icons/md'
+import { BsShieldCheck } from 'react-icons/bs'
+
+interface BookingDetail {
+  id: string
+  bookingRef: string
+  checkIn: string
+  checkOut: string
+  adults: number
+  children: number
+  totalNights: number
+  baseAmount: string | number
+  discountAmount: string | number
+  taxAmount: string | number
+  totalAmount: string | number
+  pointsUsed: number
+  status: string
+  specialRequests: string | null
+  createdAt: string
+  daysUntilCheckIn: number | null
+  nightsStayed: number | null
+  room: {
+    number: string
+    floor: number
+    roomType: {
+      name: string
+      slug: string
+      image: string | null
+      amenities: string[]
+    }
+  }
+  payment: {
+    reference: string
+    status: string
+    amount: string | number
+    currency: string
+  } | null
+  roomServiceOrders: Array<{ id: string; totalAmount: string | number; status: string; createdAt: string }>
+  serviceBookings: Array<{ id: string; amount: string | number; status: string; service: { name: string; category: string } }>
+  upgradeRequest: { id: string; status: string; requestedType: { name: string; basePrice: string | number } } | null
+  stayExtension: { id: string; status: string; newCheckOut: string; additionalNights: number; additionalAmount: string | number } | null
+}
+
+const statusColors: Record<string, string> = {
+  PENDING: 'bg-warning-bg text-warning',
+  CONFIRMED: 'bg-success-bg text-success',
+  CHECKED_IN: 'bg-success-bg text-success',
+  CHECKED_OUT: 'bg-foreground-disabled/15 text-foreground-tertiary',
+  CANCELLED: 'bg-danger-bg text-danger',
+  NO_SHOW: 'bg-danger-bg text-danger',
+}
+
+export default function BookingDetailPage() {
+  const { id } = useParams()
+  const router = useRouter()
+  const [booking, setBooking] = useState<BookingDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [cancelling, setCancelling] = useState(false)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get(`/guest/bookings/${id}`)
+        setBooking(res.data.data)
+      } catch {}
+      setLoading(false)
+    })()
+  }, [id])
+
+  const handleCancel = async () => {
+    if (!confirm('Are you sure you want to cancel this booking?')) return
+    setCancelling(true)
+    try {
+      await api.patch(`/bookings/${id}/cancel`)
+      setBooking(prev => prev ? { ...prev, status: 'CANCELLED' } : prev)
+    } catch {}
+    setCancelling(false)
+  }
+
+  const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })
+
+  if (loading) {
+    return (
+      <div className="animate-pulse">
+        <div className="h-6 w-32 bg-foreground-disabled/15 rounded mb-6" />
+        <div className="h-64 bg-foreground-disabled/10 rounded-2xl mb-6" />
+        <div className="h-48 bg-foreground-disabled/10 rounded-2xl" />
+      </div>
+    )
+  }
+
+  if (!booking) {
+    return (
+      <div className="text-center py-16">
+        <MdOutlineKingBed size={40} className="text-foreground-disabled mx-auto mb-3" />
+        <h2 className="text-foreground font-semibold text-lg mb-2">Booking not found</h2>
+        <Button href="/bookings" variant="outline" size="sm">Back to Bookings</Button>
+      </div>
+    )
+  }
+
+  const canCancel = ['PENDING', 'CONFIRMED'].includes(booking.status)
+
+  return (
+    <div>
+      {/* Back */}
+      <Link href="/bookings" className="inline-flex items-center gap-1.5 text-foreground-tertiary text-sm hover:text-foreground transition-colors mb-5">
+        <HiOutlineArrowLeft size={14} /> Back to bookings
+      </Link>
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-5 mb-8">
+        <div className="relative w-full sm:w-48 h-36 rounded-xl overflow-hidden flex-shrink-0">
+          <Image src={booking.room.roomType.image || '/room_2.jpeg'} alt="" fill className="object-cover" />
+        </div>
+        <div className="flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+            <div>
+              <h1 className="text-foreground font-heading text-xl vsm:text-2xl font-bold">{booking.room.roomType.name}</h1>
+              <p className="text-foreground-tertiary text-sm">Room {booking.room.number} &middot; Floor {booking.room.floor}</p>
+            </div>
+            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusColors[booking.status] || ''}`}>
+              {booking.status.replace('_', ' ')}
+            </span>
+          </div>
+          <p className="text-foreground-secondary text-sm font-mono">{booking.bookingRef}</p>
+          {booking.daysUntilCheckIn !== null && booking.daysUntilCheckIn > 0 && (
+            <span className="inline-block mt-2 text-xs font-medium bg-success-bg text-success px-2.5 py-0.5 rounded-full">
+              {booking.daysUntilCheckIn} day{booking.daysUntilCheckIn !== 1 ? 's' : ''} until check-in
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Left: Details */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          {/* Stay Details */}
+          <div className="border border-border rounded-xl p-5">
+            <h3 className="text-foreground font-semibold text-sm mb-4">Stay Details</h3>
+            <div className="grid grid-cols-2 vsm:grid-cols-4 gap-4">
+              {[
+                { label: 'Check-in', value: formatDate(booking.checkIn) },
+                { label: 'Check-out', value: formatDate(booking.checkOut) },
+                { label: 'Nights', value: String(booking.totalNights) },
+                { label: 'Guests', value: `${booking.adults} adult${booking.adults !== 1 ? 's' : ''}${booking.children ? `, ${booking.children} child` : ''}` },
+              ].map(item => (
+                <div key={item.label}>
+                  <p className="text-foreground-tertiary text-xs mb-0.5">{item.label}</p>
+                  <p className="text-foreground text-sm font-medium">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Price Breakdown */}
+          <div className="border border-border rounded-xl p-5">
+            <h3 className="text-foreground font-semibold text-sm mb-4">Price Breakdown</h3>
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex justify-between text-foreground-secondary">
+                <span>Base amount</span>
+                <span>${Number(booking.baseAmount).toFixed(0)}</span>
+              </div>
+              <div className="flex justify-between text-foreground-secondary">
+                <span>Tax (10%)</span>
+                <span>${Number(booking.taxAmount).toFixed(0)}</span>
+              </div>
+              {Number(booking.discountAmount) > 0 && (
+                <div className="flex justify-between text-success">
+                  <span>Loyalty discount ({booking.pointsUsed} pts)</span>
+                  <span>-${Number(booking.discountAmount).toFixed(0)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-foreground font-bold text-base pt-2 border-t border-border mt-1">
+                <span>Total</span>
+                <span>${Number(booking.totalAmount).toFixed(0)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Special Requests */}
+          {booking.specialRequests && (
+            <div className="border border-border rounded-xl p-5">
+              <h3 className="text-foreground font-semibold text-sm mb-2">Special Requests</h3>
+              <p className="text-foreground-secondary text-sm">{booking.specialRequests}</p>
+            </div>
+          )}
+
+          {/* Services */}
+          {(booking.roomServiceOrders.length > 0 || booking.serviceBookings.length > 0) && (
+            <div className="border border-border rounded-xl p-5">
+              <h3 className="text-foreground font-semibold text-sm mb-4">Services & Orders</h3>
+              <div className="flex flex-col gap-2">
+                {booking.roomServiceOrders.map(o => (
+                  <div key={o.id} className="flex justify-between text-sm py-2 border-b border-border last:border-0">
+                    <span className="text-foreground-secondary">Room Service</span>
+                    <span className="text-foreground font-medium">${Number(o.totalAmount).toFixed(0)} &middot; {o.status}</span>
+                  </div>
+                ))}
+                {booking.serviceBookings.map(s => (
+                  <div key={s.id} className="flex justify-between text-sm py-2 border-b border-border last:border-0">
+                    <span className="text-foreground-secondary">{s.service.name}</span>
+                    <span className="text-foreground font-medium">${Number(s.amount).toFixed(0)} &middot; {s.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Payment + Actions */}
+        <div className="flex flex-col gap-6">
+          {/* Payment */}
+          <div className="border border-border rounded-xl p-5">
+            <h3 className="text-foreground font-semibold text-sm mb-4">Payment</h3>
+            {booking.payment ? (
+              <div className="flex flex-col gap-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-foreground-tertiary">Status</span>
+                  <span className={`font-medium ${booking.payment.status === 'COMPLETED' ? 'text-success' : booking.payment.status === 'REFUNDED' ? 'text-warning' : 'text-foreground'}`}>
+                    {booking.payment.status}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-foreground-tertiary">Reference</span>
+                  <span className="text-foreground font-mono text-xs">{booking.payment.reference}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-foreground-tertiary">Amount</span>
+                  <span className="text-foreground font-medium">${Number(booking.payment.amount).toFixed(0)}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-foreground-tertiary text-sm">No payment recorded</p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col gap-2">
+            {canCancel && (
+              <Button
+                onClick={handleCancel}
+                loading={cancelling}
+                variant="danger"
+                fullWidth
+              >
+                Cancel Booking
+              </Button>
+            )}
+            <Button href={`/bookings/${booking.id}/receipt`} variant="outline" fullWidth>
+              View Receipt
+            </Button>
+          </div>
+
+          {/* Trust */}
+          <div className="flex flex-col gap-2">
+            {['Free cancellation 24hrs before', 'Secure payment', 'Instant confirmation'].map(t => (
+              <div key={t} className="flex items-center gap-2 text-foreground-tertiary">
+                <BsShieldCheck size={12} />
+                <span className="text-xs">{t}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
