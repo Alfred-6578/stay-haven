@@ -114,11 +114,12 @@ function RoomDetailContent() {
   const availableCount = roomType?.rooms.filter(r => r.status === 'AVAILABLE').length || 0
 
   const handleBook = () => {
+    const bookParams = `roomId=${selectedRoom}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests}`
     if (!user) {
-      router.push(`/login?redirect=/rooms/${slug}?checkIn=${checkIn}%26checkOut=${checkOut}%26adults=${guests}`)
+      router.push(`/login?redirect=${encodeURIComponent(`/book?${bookParams}`)}`)
       return
     }
-    router.push(`/rooms/${slug}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests}&roomId=${selectedRoom}`)
+    router.push(`/book?${bookParams}`)
   }
 
   if (loading) {

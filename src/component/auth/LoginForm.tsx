@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import React, { useState } from 'react'
 import { CiLock } from 'react-icons/ci'
 import { HiOutlineMail } from 'react-icons/hi'
@@ -15,6 +15,8 @@ const LoginForm = () => {
     const [loading, setLoading] = useState(false)
     const { login } = useAuth()
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const redirect = searchParams.get('redirect')
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -24,16 +26,20 @@ const LoginForm = () => {
         try {
             const user = await login(email, password)
 
-            switch (user.role) {
-                case 'ADMIN':
-                    router.push('/dashboard')
-                    break
-                case 'MANAGER':
-                case 'STAFF':
-                    router.push('/dashboard')
-                    break
-                default:
-                    router.push('/dashboard')
+            if (redirect) {
+                router.push(redirect)
+            } else {
+                switch (user.role) {
+                    case 'ADMIN':
+                        router.push('/dashboard')
+                        break
+                    case 'MANAGER':
+                    case 'STAFF':
+                        router.push('/dashboard')
+                        break
+                    default:
+                        router.push('/dashboard')
+                }
             }
         } catch (err: unknown) {
             const message =
