@@ -60,6 +60,21 @@ export const POST = withAuth(async (request: NextRequest, _ctx, user) => {
       );
     }
 
+    // Check if user already has a PENDING booking for this room/dates
+    const existingBooking = await prisma.booking.findFirst({
+      where: {
+        guestId: user.id,
+        roomId,
+        checkIn: checkInDate,
+        checkOut: checkOutDate,
+        status: "PENDING",
+      },
+      include: { room: { include: { roomType: true } } },
+    });
+    if (existingBooking) {
+      return successResponse(existingBooking, "Existing booking found", 200);
+    }
+
     const available = await checkRoomAvailability(
       roomId,
       checkInDate,
