@@ -2,16 +2,27 @@ import ResetPasswordForm from '@/component/auth/ResetPasswordForm'
 import SideContent from '@/component/auth/SideContent'
 import React, { Suspense } from 'react'
 
-const ResetPasswordPage = () => {
+interface PageProps {
+  searchParams: Promise<{ activate?: string }>
+}
+
+const ResetPasswordPage = async ({ searchParams }: PageProps) => {
+  const { activate } = await searchParams
+  const isActivation = activate === '1'
+
   return (
     <div className='grid lg:grid-cols-2 min-h-screen'>
         <SideContent>
             <div className="flex flex-col gap-6">
                 <h1 className="font-heading font-semibold italic leading-16 text-5xl">
-                    A fresh start is just one step away.
+                    {isActivation
+                      ? "Welcome — let's activate your account."
+                      : "A fresh start is just one step away."}
                 </h1>
                 <p>
-                    Choose a strong password to keep your account secure.
+                    {isActivation
+                      ? "Set a password to access your booking, earn loyalty points, and manage your stay."
+                      : "Choose a strong password to keep your account secure."}
                 </p>
             </div>
         </SideContent>

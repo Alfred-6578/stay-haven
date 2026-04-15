@@ -6,7 +6,8 @@ import { api } from '@/lib/api'
 import { BsShieldCheck } from 'react-icons/bs'
 
 interface Props {
-  roomId: string
+  /** One or more rooms of the same type. Multiple rooms → group booking. */
+  roomIds: string[]
   checkIn: string
   checkOut: string
   adults: number
@@ -14,11 +15,11 @@ interface Props {
   pointsUsed: number
   discount: number
   totalAmount: number
-  onSuccess: (bookingId: string) => void
+  onSuccess: (bookingId: string, groupRef: string | null) => void
 }
 
 const BookingStepPayment = ({
-  roomId, checkIn, checkOut, adults, specialRequests,
+  roomIds, checkIn, checkOut, adults, specialRequests,
   pointsUsed, discount, totalAmount,
   onSuccess,
 }: Props) => {
@@ -27,36 +28,44 @@ const BookingStepPayment = ({
   const [paymentState, setPaymentState] = useState<{
     reference: string
     bookingId: string
+    groupRef: string | null
   } | null>(null)
 
   const finalAmount = Math.max(0, totalAmount - discount)
+  const isGroup = roomIds.length > 1
 
   const handlePay = async () => {
     setError('')
     setLoading(true)
 
     try {
-      // Step 1: Create the booking
-      const bookingRes = await api.post('/bookings', {
-        roomId,
+      // Step 1: create N PENDING bookings with shared groupRef (N can be 1)
+      const bookingRes = await api.post('/bookings/group', {
+        rooms: roomIds.map(id => ({ roomId: id, adults })),
         checkIn,
         checkOut,
-        adults,
         specialRequests: specialRequests || undefined,
       })
-      const booking = bookingRes.data.data
-      const bookingId = booking.id
+      const { bookingIds, groupRef, bookings } = bookingRes.data.data as {
+        bookingIds: string[]
+        groupRef: string | null
+        bookings: Array<{ id: string }>
+      }
 
-      // Step 2: Initialize payment
-      const paymentRes = await api.post('/payments/initialize', {
-        bookingId,
+      // Step 2: initialize Paystack against the group
+      const payRes = await api.post('/payments/group/initialize', {
+        bookingIds,
         pointsUsed,
       })
-      const { authorizationUrl, reference } = paymentRes.data.data
+      const { authorizationUrl, reference } = payRes.data.data
 
-      setPaymentState({ reference, bookingId })
+      setPaymentState({
+        reference,
+        bookingId: bookings[0].id,
+        groupRef,
+      })
 
-      // Step 3: Open Paystack popup
+      // Step 3: open Paystack popup
       window.open(authorizationUrl, '_blank', 'width=600,height=700,scrollbars=yes')
     } catch (err: unknown) {
       const message =
@@ -73,7 +82,13 @@ const BookingStepPayment = ({
       <PaymentPolling
         reference={paymentState.reference}
         bookingId={paymentState.bookingId}
-        onSuccess={() => onSuccess(paymentState.bookingId)}
+        statusPath={`/payments/group/status/${paymentState.reference}`}
+        timeoutHref={
+          paymentState.groupRef
+            ? `/bookings?groupRef=${paymentState.groupRef}`
+            : `/bookings/${paymentState.bookingId}`
+        }
+        onSuccess={() => onSuccess(paymentState.bookingId, paymentState.groupRef)}
         onRetry={() => setPaymentState(null)}
       />
     )
@@ -82,14 +97,16 @@ const BookingStepPayment = ({
   return (
     <div className="max-w-xl mx-auto">
       <h2 className="font-heading text-2xl vsm:text-3xl font-bold text-foreground mb-2">Complete Payment</h2>
-      <p className="text-foreground-tertiary text-sm mb-8">Review your final total and proceed to pay.</p>
+      <p className="text-foreground-tertiary text-sm mb-8">
+        Review your final total and proceed to pay.
+      </p>
 
       {/* Order summary */}
       <div className="border border-border rounded-2xl p-5 vsm:p-6 mb-6">
         <h4 className="font-semibold text-foreground text-sm mb-4">Order Summary</h4>
         <div className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between text-foreground-secondary">
-            <span>Room total</span>
+            <span>{isGroup ? `${roomIds.length} rooms` : 'Room total'}</span>
             <span>${totalAmount.toFixed(0)}</span>
           </div>
           {discount > 0 && (
@@ -115,7 +132,6 @@ const BookingStepPayment = ({
         Pay ${finalAmount.toFixed(0)} with Paystack
       </Button>
 
-      {/* Trust signals */}
       <div className="flex flex-col gap-2.5 mt-6">
         {[
           'Your payment is secured by Paystack',

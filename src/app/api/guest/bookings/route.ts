@@ -15,9 +15,14 @@ export const GET = withAuth(
         Math.max(1, parseInt(searchParams.get("limit") || "10", 10))
       );
 
+      const groupRef = searchParams.get("groupRef");
+
       const where: Prisma.BookingWhereInput = { guestId: user.id };
       if (status) {
         where.status = status as Prisma.EnumBookingStatusFilter;
+      }
+      if (groupRef) {
+        where.groupRef = groupRef;
       }
 
       const today = new Date();

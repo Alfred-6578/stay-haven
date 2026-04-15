@@ -6,10 +6,12 @@ import {
   HiOutlineArrowCircleLeft,
   HiOutlineExclamation,
   HiOutlineSparkles,
+  HiOutlinePlus,
 } from 'react-icons/hi'
 import RoomStatusBoard, { StaffRoom } from '@/component/staff/RoomStatusBoard'
 import CheckInModal, { CheckInBooking } from '@/component/staff/CheckInModal'
 import CheckOutModal, { CheckOutBooking } from '@/component/staff/CheckOutModal'
+import WalkInBookingModal from '@/component/staff/walkin/WalkInBookingModal'
 
 interface DashboardData {
   todayArrivals: Array<{
@@ -79,6 +81,7 @@ export default function StaffDashboard() {
   const [loading, setLoading] = useState(true)
   const [checkInBooking, setCheckInBooking] = useState<CheckInBooking | null>(null)
   const [checkOutBooking, setCheckOutBooking] = useState<CheckOutBooking | null>(null)
+  const [walkInOpen, setWalkInOpen] = useState(false)
 
   const fetchAll = useCallback(async () => {
     try {
@@ -134,7 +137,16 @@ export default function StaffDashboard() {
 
   return (
     <div>
-      <h1 className="text-foreground font-heading text-2xl font-bold mb-6">Staff Dashboard</h1>
+      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
+        <h1 className="text-foreground font-heading text-2xl font-bold">Staff Dashboard</h1>
+        <button
+          onClick={() => setWalkInOpen(true)}
+          className="inline-flex items-center gap-2 bg-foreground text-foreground-inverse px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90"
+        >
+          <HiOutlinePlus size={16} />
+          Walk-in Booking
+        </button>
+      </div>
 
       {/* Stat bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -259,6 +271,11 @@ export default function StaffDashboard() {
           setCheckOutBooking(null)
           fetchAll()
         }}
+      />
+      <WalkInBookingModal
+        open={walkInOpen}
+        onClose={() => setWalkInOpen(false)}
+        onSuccess={fetchAll}
       />
     </div>
   )

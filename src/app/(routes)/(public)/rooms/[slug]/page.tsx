@@ -52,7 +52,7 @@ function RoomDetailContent() {
   const [guests, setGuests] = useState(searchParams.get('adults') || '1')
   const [availability, setAvailability] = useState<AvailabilityResult[]>([])
   const [availLoading, setAvailLoading] = useState(false)
-  const [selectedRoom, setSelectedRoom] = useState<string | null>(null)
+  const [selectedRooms, setSelectedRooms] = useState<string[]>([])
 
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIdx, setLightboxIdx] = useState(0)
@@ -96,7 +96,7 @@ function RoomDetailContent() {
   useEffect(() => {
     if (!checkIn || !checkOut || !roomType) return
     setAvailLoading(true)
-    setSelectedRoom(null)
+    setSelectedRooms([])
     ;(async () => {
       try {
         const p = new URLSearchParams({ checkIn, checkOut, adults: guests, typeId: roomType.id })
@@ -114,12 +114,20 @@ function RoomDetailContent() {
   const availableCount = roomType?.rooms.filter(r => r.status === 'AVAILABLE').length || 0
 
   const handleBook = () => {
-    const bookParams = `roomId=${selectedRoom}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests}`
+    // Use `roomIds` (comma-separated) so the /book page can handle 1 or N
+    const idsParam = selectedRooms.join(',')
+    const bookParams = `roomIds=${idsParam}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests}`
     if (!user) {
       router.push(`/login?redirect=${encodeURIComponent(`/book?${bookParams}`)}`)
       return
     }
     router.push(`/book?${bookParams}`)
+  }
+
+  const toggleRoom = (roomId: string) => {
+    setSelectedRooms(prev =>
+      prev.includes(roomId) ? prev.filter(id => id !== roomId) : [...prev, roomId]
+    )
   }
 
   if (loading) {
@@ -200,7 +208,7 @@ function RoomDetailContent() {
             weekendMultiplier={Number(roomType.weekendMultiplier)}
             rooms={roomType.rooms}
             availableCount={availableCount}
-            selectedRoom={selectedRoom}
+            selectedRoom={selectedRooms[0] || null}
             visible={vis.content}
           />
           <BookingCard
@@ -215,8 +223,8 @@ function RoomDetailContent() {
             onGuestsChange={setGuests}
             availability={availability}
             availLoading={availLoading}
-            selectedRoom={selectedRoom}
-            onRoomSelect={setSelectedRoom}
+            selectedRooms={selectedRooms}
+            onRoomToggle={toggleRoom}
             onBook={handleBook}
             visible={vis.content}
           />

@@ -11,22 +11,26 @@ import BookingStepPayment from '@/component/booking/BookingStepPayment'
 import { HiOutlineArrowLeft } from 'react-icons/hi'
 import { MdOutlineKingBed } from 'react-icons/md'
 
-interface RoomData {
+interface RoomTypeSummary {
   id: string
-  number: string
-  floor: number
-  roomType: {
-    name: string
-    slug: string
-    image: string | null
-    basePrice: string | number
-    weekendMultiplier: string | number
-    capacity: number
-  }
+  name: string
+  slug: string
+  image: string | null
+  basePrice: string | number
+  weekendMultiplier: string | number
+  capacity: number
+}
+
+interface AvailableRow {
+  room: { id: string; number: string; floor: number }
+  baseAmount: number
+  taxAmount: number
+  totalAmount: number
+  totalNights: number
 }
 
 interface PricingData {
-  baseAmount: number
+  baseAmount: number    // combined across all selected rooms
   taxAmount: number
   totalAmount: number
   totalNights: number
@@ -38,13 +42,20 @@ function BookPageContent() {
   const router = useRouter()
   const { user } = useAuth()
 
-  const roomId = searchParams.get('roomId') || ''
+  // Accept either roomId (legacy single-room link) or roomIds (CSV, multi-room)
+  const roomIdsParam =
+    searchParams.get('roomIds') || searchParams.get('roomId') || ''
+  const roomIds = roomIdsParam
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
   const checkIn = searchParams.get('checkIn') || ''
   const checkOut = searchParams.get('checkOut') || ''
   const adults = parseInt(searchParams.get('adults') || '1', 10)
 
   const [step, setStep] = useState(1)
-  const [room, setRoom] = useState<RoomData | null>(null)
+  const [roomType, setRoomType] = useState<RoomTypeSummary | null>(null)
+  const [selectedRoomsInfo, setSelectedRoomsInfo] = useState<AvailableRow[]>([])
   const [pricing, setPricing] = useState<PricingData | null>(null)
   const [guestPoints, setGuestPoints] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -55,7 +66,7 @@ function BookPageContent() {
   const [discount, setDiscount] = useState(0)
 
   useEffect(() => {
-    if (!roomId || !checkIn || !checkOut) {
+    if (roomIds.length === 0 || !checkIn || !checkOut) {
       setError('Missing booking parameters')
       setLoading(false)
       return
@@ -63,40 +74,51 @@ function BookPageContent() {
 
     (async () => {
       try {
-        // Fetch room details
-        const roomRes = await api.get(`/rooms/${roomId}`)
-        const roomData = roomRes.data.data
-        setRoom(roomData)
+        // 1) Fetch the first room's type for hero/name (all rooms share a type
+        //    since the room-detail flow only allows same-type multi-select)
+        const firstRoomRes = await api.get(`/rooms/${roomIds[0]}`)
+        const firstRoom = firstRoomRes.data.data
+        const rt: RoomTypeSummary = {
+          id: firstRoom.roomType?.id || firstRoom.roomTypeId,
+          name: firstRoom.roomType.name,
+          slug: firstRoom.roomType.slug,
+          image: firstRoom.roomType.image,
+          basePrice: firstRoom.roomType.basePrice,
+          weekendMultiplier: firstRoom.roomType.weekendMultiplier,
+          capacity: firstRoom.roomType.capacity,
+        }
+        setRoomType(rt)
 
-        // Fetch availability to get pricing
+        // 2) Fetch live availability for the selected type so we can verify
+        //    every requested room is still bookable and grab per-room pricing.
         const params = new URLSearchParams({
-          roomId,
           checkIn,
           checkOut,
           adults: String(adults),
-          typeId: roomData.roomType?.id || roomData.roomTypeId,
+          typeId: rt.id,
         })
         const availRes = await api.get(`/rooms/available?${params}`)
-        const available = availRes.data.data
-        const match = available.find((a: { room: { id: string } }) => a.room.id === roomId)
+        const available = availRes.data.data as AvailableRow[]
+        const matches = roomIds
+          .map(id => available.find(a => a.room.id === id))
+          .filter((a): a is AvailableRow => !!a)
 
-        if (!match) {
-          setError('This room is no longer available for the selected dates')
+        if (matches.length !== roomIds.length) {
+          setError('One or more rooms are no longer available for these dates')
           setLoading(false)
           return
         }
 
-        setPricing({
-          baseAmount: match.baseAmount,
-          taxAmount: match.taxAmount,
-          totalAmount: match.totalAmount,
-          totalNights: match.totalNights,
-          nightBreakdown: [], // We'll calculate this client-side
-        })
+        setSelectedRoomsInfo(matches)
 
-        // Calculate night breakdown client-side
-        const basePrice = Number(roomData.roomType.basePrice)
-        const weekendMult = Number(roomData.roomType.weekendMultiplier)
+        const combinedBase = matches.reduce((s, m) => s + m.baseAmount, 0)
+        const combinedTax = matches.reduce((s, m) => s + m.taxAmount, 0)
+        const combinedTotal = matches.reduce((s, m) => s + m.totalAmount, 0)
+        const nights = matches[0].totalNights
+
+        // Night breakdown — per-room (multiplier applied in review via × rooms)
+        const basePrice = Number(rt.basePrice)
+        const weekendMult = Number(rt.weekendMultiplier)
         const breakdown: PricingData['nightBreakdown'] = []
         const current = new Date(checkIn)
         const end = new Date(checkOut)
@@ -110,9 +132,15 @@ function BookPageContent() {
           })
           current.setDate(current.getDate() + 1)
         }
-        setPricing(prev => prev ? { ...prev, nightBreakdown: breakdown } : prev)
 
-        // Fetch guest loyalty points
+        setPricing({
+          baseAmount: combinedBase,
+          taxAmount: combinedTax,
+          totalAmount: combinedTotal,
+          totalNights: nights,
+          nightBreakdown: breakdown,
+        })
+
         if (user) {
           try {
             const meRes = await api.get('/auth/me')
@@ -128,7 +156,8 @@ function BookPageContent() {
         setLoading(false)
       }
     })()
-  }, [roomId, checkIn, checkOut, adults, user])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomIdsParam, checkIn, checkOut, adults, user])
 
   if (loading) {
     return (
@@ -138,7 +167,7 @@ function BookPageContent() {
     )
   }
 
-  if (error || !room || !pricing) {
+  if (error || !roomType || !pricing || selectedRoomsInfo.length === 0) {
     return (
       <div className="min-h-screen bg-foreground-inverse flex flex-col items-center justify-center px-5">
         <MdOutlineKingBed className="text-foreground-disabled text-6xl mb-4" />
@@ -156,26 +185,30 @@ function BookPageContent() {
 
   return (
     <div className="min-h-screen bg-foreground-inverse">
-      {/* Header */}
       <div className="border-b border-border px-5 vsm:px-8 sm:px-12 py-4">
         <div className="flex items-center justify-between max-w-5xl mx-auto">
-          <Link href={`/rooms/${room.roomType.slug}`} className="text-foreground-tertiary text-sm hover:text-foreground flex items-center gap-1.5 transition-colors">
+          <Link
+            href={`/rooms/${roomType.slug}`}
+            className="text-foreground-tertiary text-sm hover:text-foreground flex items-center gap-1.5 transition-colors"
+          >
             <HiOutlineArrowLeft size={14} />
             Back
           </Link>
           <BookingStepIndicator currentStep={step} />
-          <div className="w-16" /> {/* Spacer */}
+          <div className="w-16" />
         </div>
       </div>
 
-      {/* Content */}
       <div className="px-5 vsm:px-8 sm:px-12 py-10">
         {step === 1 && (
           <BookingStepReview
-            roomImage={room.roomType.image || '/room_2.jpeg'}
-            roomTypeName={room.roomType.name}
-            roomNumber={room.number}
-            floor={room.floor}
+            roomImage={roomType.image || '/room_2.jpeg'}
+            roomTypeName={roomType.name}
+            rooms={selectedRoomsInfo.map(r => ({
+              number: r.room.number,
+              floor: r.room.floor,
+              totalAmount: r.totalAmount,
+            }))}
             checkIn={checkIn}
             checkOut={checkOut}
             adults={adults}
@@ -207,15 +240,18 @@ function BookPageContent() {
 
         {step === 3 && (
           <BookingStepPayment
-            roomId={roomId}
+            roomIds={roomIds}
             checkIn={checkIn}
             checkOut={checkOut}
             adults={adults}
             pointsUsed={pointsUsed}
             discount={discount}
             totalAmount={pricing.totalAmount}
-            onSuccess={(bookingId) => {
-              router.push(`/book/confirmed?bookingId=${bookingId}`)
+            onSuccess={(bookingId, groupRef) => {
+              const qs = groupRef
+                ? `groupRef=${groupRef}`
+                : `bookingId=${bookingId}`
+              router.push(`/book/confirmed?${qs}`)
             }}
           />
         )}
