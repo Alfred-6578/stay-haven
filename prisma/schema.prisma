@@ -199,6 +199,7 @@ model Room {
 model Booking {
   id              String        @id @default(cuid())
   bookingRef      String        @unique
+  groupRef        String?
   guestId         String
   roomId          String
   checkIn         DateTime
@@ -233,6 +234,7 @@ model Booking {
   @@index([guestId])
   @@index([status])
   @@index([checkIn, checkOut])
+  @@index([groupRef])
 }
 
 model Payment {

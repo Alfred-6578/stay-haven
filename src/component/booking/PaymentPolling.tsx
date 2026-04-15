@@ -8,9 +8,13 @@ interface Props {
   bookingId: string
   onSuccess: () => void
   onRetry: () => void
+  /** Override the status endpoint. Defaults to /payments/status/{ref}. */
+  statusPath?: string
+  /** Destination of the "View Booking" button on timeout. */
+  timeoutHref?: string
 }
 
-const PaymentPolling = ({ reference, bookingId, onSuccess, onRetry }: Props) => {
+const PaymentPolling = ({ reference, bookingId, onSuccess, onRetry, statusPath, timeoutHref }: Props) => {
   const [status, setStatus] = useState<'waiting' | 'success' | 'failed' | 'timeout'>('waiting')
   const attempts = useRef(0)
   const maxAttempts = 20
@@ -21,7 +25,7 @@ const PaymentPolling = ({ reference, bookingId, onSuccess, onRetry }: Props) => 
       attempts.current++
 
       try {
-        const res = await api.get(`/payments/status/${reference}`)
+        const res = await api.get(statusPath || `/payments/status/${reference}`)
         const paymentStatus = res.data.data?.status
 
         if (paymentStatus === 'COMPLETED') {
@@ -45,7 +49,7 @@ const PaymentPolling = ({ reference, bookingId, onSuccess, onRetry }: Props) => 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }, [reference, onSuccess])
+  }, [reference, onSuccess, statusPath])
 
   return (
     <div className="max-w-md mx-auto text-center py-10">
@@ -98,7 +102,7 @@ const PaymentPolling = ({ reference, bookingId, onSuccess, onRetry }: Props) => 
           </p>
           <div className="flex gap-3 justify-center">
             <Button onClick={onRetry} variant="outline">Retry</Button>
-            <Button href={`/guest/bookings/${bookingId}`}>View Booking</Button>
+            <Button href={timeoutHref || `/guest/bookings/${bookingId}`}>View Booking</Button>
           </div>
         </>
       )}

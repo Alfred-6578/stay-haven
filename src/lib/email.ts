@@ -99,18 +99,27 @@ async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<boole
   try {
     const transport = createTransporter();
     if (!transport) {
-      console.warn("SMTP not configured — skipping email to:", to);
+      console.warn(
+        `[email] SMTP not configured — skipping email to ${to} (subject: "${subject}"). ` +
+          `Set SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS in .env`
+      );
       return false;
     }
-    await transport.sendMail({
+    const info = await transport.sendMail({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
       to,
       subject,
       html,
     });
+    console.log(
+      `[email] Sent to ${to} (subject: "${subject}", messageId: ${info.messageId})`
+    );
     return true;
   } catch (error) {
-    console.error("Failed to send email:", error);
+    console.error(
+      `[email] Failed to send to ${to} (subject: "${subject}"):`,
+      error
+    );
     return false;
   }
 }
@@ -250,6 +259,82 @@ export async function bookingConfirmationEmail(
       ${primaryButton(`${CLIENT_URL}/bookings`, "View My Bookings")}
       <p style="margin: 0; font-size: 13px; color: #9ca3af; line-height: 1.6; text-align: center;">
         We look forward to welcoming you. Need to make changes? Visit your dashboard or reply to this email.
+      </p>
+    `),
+  });
+}
+
+export async function walkInActivationEmail(
+  user: { firstName: string; email: string },
+  booking: {
+    bookingRef: string;
+    checkIn: Date;
+    checkOut: Date;
+    totalAmount: number | string;
+  },
+  roomLabel: string,
+  activationLink: string
+): Promise<boolean> {
+  const checkIn = new Date(booking.checkIn).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const checkOut = new Date(booking.checkOut).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  return sendEmail({
+    to: user.email,
+    subject: `Welcome to StayHaven — activate your account (${booking.bookingRef})`,
+    html: emailLayout(`
+      <h1 style="margin: 0 0 8px; font-size: 24px; font-weight: 700; color: #0B1B3A;">
+        Welcome, ${user.firstName}!
+      </h1>
+      <div style="width: 48px; height: 3px; background: #D97706; border-radius: 2px; margin: 0 0 20px;"></div>
+      <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.7;">
+        Your stay at StayHaven is confirmed. Our front-desk team checked you in
+        and created a StayHaven account for you using this email address.
+      </p>
+
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 0 0 24px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+        <tr>
+          <td style="padding: 24px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              ${infoRow("Booking", booking.bookingRef)}
+              ${infoRow("Room", roomLabel)}
+              ${infoRow("Check-in", checkIn)}
+              ${infoRow("Check-out", checkOut)}
+              <tr>
+                <td style="padding: 14px 0 0; font-size: 13px; color: #6b7280; width: 140px;">Total Paid</td>
+                <td style="padding: 14px 0 0; font-size: 20px; color: #D97706; font-weight: 700;">\u20A6${Number(booking.totalAmount).toLocaleString()}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin: 0 0 8px; font-size: 15px; color: #374151; line-height: 1.7;">
+        <strong>Set a password to access your account</strong> — you'll be able to view this booking, request room service, earn loyalty points, and more.
+      </p>
+
+      ${primaryButton(activationLink, "Activate My Account")}
+
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 4px 0 20px; background: #fef9ee; border-radius: 8px; border-left: 4px solid #D97706;">
+        <tr>
+          <td style="padding: 14px 18px; font-size: 13px; color: #92400e; line-height: 1.5;">
+            <strong>This activation link expires in 72 hours.</strong> If it expires you can request a fresh one from the
+            <a href="${CLIENT_URL}/forgot-password" style="color: #92400e; text-decoration: underline;">forgot password</a> page using this email address.
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin: 0; font-size: 13px; color: #9ca3af; line-height: 1.6;">
+        Didn't make a booking? Reply to this email and we'll look into it right away.
       </p>
     `),
   });

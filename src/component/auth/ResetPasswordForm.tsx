@@ -9,6 +9,7 @@ const ResetPasswordForm = () => {
     const searchParams = useSearchParams()
     const router = useRouter()
     const token = searchParams.get('token')
+    const isActivation = searchParams.get('activate') === '1'
 
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
@@ -50,7 +51,10 @@ const ResetPasswordForm = () => {
 
         try {
             await api.post('/auth/reset-password', { token, newPassword: password })
-            router.push('/login?message=Password+updated+successfully')
+            const msg = isActivation
+              ? 'Account activated — sign in to view your booking'
+              : 'Password updated successfully'
+            router.push(`/login?message=${encodeURIComponent(msg)}`)
         } catch (err: unknown) {
             const message =
                 (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -80,10 +84,16 @@ const ResetPasswordForm = () => {
     return (
         <div className="w-full">
             <div>
-                <h5 className="text-foreground-tertiary text-[12px] sm:text-sm font-semibold uppercase">Almost there</h5>
-                <h1 className="font-heading mt-2 mb-1 text-accent text-xl tny:text-2xl sm:text-3xl">Set a new password</h1>
+                <h5 className="text-foreground-tertiary text-[12px] sm:text-sm font-semibold uppercase">
+                    {isActivation ? 'Activate account' : 'Almost there'}
+                </h5>
+                <h1 className="font-heading mt-2 mb-1 text-accent text-xl tny:text-2xl sm:text-3xl">
+                    {isActivation ? 'Set your password' : 'Set a new password'}
+                </h1>
                 <p className="text-foreground-secondary text-sm mb-6">
-                    Your new password must be at least 8 characters with one uppercase letter and one number.
+                    {isActivation
+                      ? "We created an account for you when you checked in. Pick a password to start managing your booking."
+                      : "Your new password must be at least 8 characters with one uppercase letter and one number."}
                 </p>
             </div>
             {error && (
@@ -148,7 +158,9 @@ const ResetPasswordForm = () => {
                     disabled={disabled}
                     className={`bg-foreground w-full rounded-md py-3 font-medium ${disabled ? 'opacity-20 cursor-not-allowed' : 'text-background'}`}
                 >
-                    {loading ? 'Resetting...' : 'Reset Password'}
+                    {loading
+                      ? (isActivation ? 'Activating...' : 'Resetting...')
+                      : (isActivation ? 'Activate Account' : 'Reset Password')}
                 </button>
             </form>
         </div>
