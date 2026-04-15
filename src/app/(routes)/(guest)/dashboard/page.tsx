@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 import { api } from '@/lib/api'
 import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
 import Button from '@/component/ui/Button'
+import ActiveOrdersSection from '@/component/room-service/ActiveOrdersSection'
 import { HiOutlineCalendar, HiOutlineStar, HiOutlineArrowRight } from 'react-icons/hi'
 import { MdOutlineRoomService, MdOutlineMiscellaneousServices, MdOutlineKingBed } from 'react-icons/md'
 
@@ -142,6 +143,11 @@ export default function GuestDashboard() {
             </div>
           ) : null}
         </div>
+      </div>
+
+      {/* Active Room Service */}
+      <div className="mb-6">
+        <ActiveOrdersSection compact />
       </div>
 
       {/* Quick Actions */}

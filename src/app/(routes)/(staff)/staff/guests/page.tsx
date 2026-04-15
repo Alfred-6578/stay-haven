@@ -1,8 +1,10 @@
 'use client'
 import React, { useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
-import { HiOutlineSearch, HiOutlineChevronDown, HiOutlineChevronUp } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineChevronDown, HiOutlineChevronUp, HiOutlineLogin, HiOutlineLogout } from 'react-icons/hi'
 import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
+import CheckInModal, { CheckInBooking } from '@/component/staff/CheckInModal'
+import CheckOutModal, { CheckOutBooking } from '@/component/staff/CheckOutModal'
 
 interface GuestSearchResult {
   id: string
@@ -26,6 +28,19 @@ interface GuestSearchResult {
   } | null
 }
 
+interface DetailBooking {
+  id: string
+  bookingRef: string
+  status: string
+  checkIn: string
+  checkOut: string
+  totalNights?: number
+  totalAmount: string | number
+  specialRequests?: string | null
+  room: { number: string; floor: number; roomType: { name: string } }
+  payment: { status: string } | null
+}
+
 interface GuestDetail {
   user: {
     id: string
@@ -45,16 +60,7 @@ interface GuestDetail {
     loyaltyTier: string
     totalStays: number
   } | null
-  bookings: Array<{
-    id: string
-    bookingRef: string
-    status: string
-    checkIn: string
-    checkOut: string
-    totalAmount: string | number
-    room: { number: string; floor: number; roomType: { name: string } }
-    payment: { status: string } | null
-  }>
+  bookings: DetailBooking[]
   loyalty: {
     tier: string
     totalPoints: number
@@ -83,6 +89,15 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+// A booking is ready for check-in if its check-in date is today or past
+function isCheckInReady(booking: DetailBooking): boolean {
+  if (booking.status !== 'CONFIRMED') return false
+  const checkInDate = new Date(booking.checkIn)
+  const endOfToday = new Date()
+  endOfToday.setHours(23, 59, 59, 999)
+  return checkInDate <= endOfToday
+}
+
 export default function StaffGuestsPage() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<GuestSearchResult[]>([])
@@ -91,6 +106,10 @@ export default function StaffGuestsPage() {
   const [detailMap, setDetailMap] = useState<Record<string, GuestDetail>>({})
   const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Modal state
+  const [checkInBooking, setCheckInBooking] = useState<CheckInBooking | null>(null)
+  const [checkOutBooking, setCheckOutBooking] = useState<CheckOutBooking | null>(null)
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -116,6 +135,15 @@ export default function StaffGuestsPage() {
     }
   }, [query])
 
+  const reloadDetail = async (guestId: string) => {
+    try {
+      const res = await api.get(`/staff/guests/${guestId}`)
+      setDetailMap(prev => ({ ...prev, [guestId]: res.data.data }))
+    } catch {
+      // ignore
+    }
+  }
+
   const toggleExpand = async (id: string) => {
     if (expandedId === id) {
       setExpandedId(null)
@@ -132,6 +160,79 @@ export default function StaffGuestsPage() {
       } finally {
         setDetailLoadingId(null)
       }
+    }
+  }
+
+  const handleCheckIn = (detail: GuestDetail, booking: DetailBooking) => {
+    setCheckInBooking({
+      id: booking.id,
+      bookingRef: booking.bookingRef,
+      checkIn: booking.checkIn,
+      checkOut: booking.checkOut,
+      totalNights: booking.totalNights || 0,
+      specialRequests: booking.specialRequests || null,
+      guest: {
+        firstName: detail.user.firstName,
+        lastName: detail.user.lastName,
+        email: detail.user.email,
+        phone: detail.user.phone,
+        guestProfile: detail.guestProfile
+          ? { idNumber: detail.guestProfile.idNumber, idType: detail.guestProfile.idType }
+          : null,
+      },
+      room: {
+        number: booking.room.number,
+        floor: booking.room.floor,
+        roomType: { name: booking.room.roomType.name },
+      },
+    })
+  }
+
+  const handleCheckOut = async (detail: GuestDetail, booking: DetailBooking) => {
+    // Fetch full booking to get roomServiceOrders for the pending-orders warning
+    try {
+      const res = await api.get(`/bookings/${booking.id}`)
+      const full = res.data.data
+      setCheckOutBooking({
+        id: full.id,
+        bookingRef: full.bookingRef,
+        checkIn: full.checkIn,
+        checkOut: full.checkOut,
+        totalNights: full.totalNights,
+        guest: {
+          firstName: detail.user.firstName,
+          lastName: detail.user.lastName,
+          email: detail.user.email,
+        },
+        room: {
+          number: full.room.number,
+          floor: full.room.floor,
+          roomType: { name: full.room.roomType.name },
+        },
+        roomServiceOrders: (full.roomServiceOrders || []).filter(
+          (o: { status: string }) => o.status !== 'DELIVERED'
+        ),
+      })
+    } catch {
+      // Fall back to opening with minimal data if the fetch fails
+      setCheckOutBooking({
+        id: booking.id,
+        bookingRef: booking.bookingRef,
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        totalNights: booking.totalNights || 0,
+        guest: {
+          firstName: detail.user.firstName,
+          lastName: detail.user.lastName,
+          email: detail.user.email,
+        },
+        room: {
+          number: booking.room.number,
+          floor: booking.room.floor,
+          roomType: { name: booking.room.roomType.name },
+        },
+        roomServiceOrders: [],
+      })
     }
   }
 
@@ -202,7 +303,11 @@ export default function StaffGuestsPage() {
                     {detailLoadingId === guest.id || !detail ? (
                       <div className="h-32 bg-foreground-disabled/10 rounded-lg animate-pulse" />
                     ) : (
-                      <GuestDetailPanel detail={detail} />
+                      <GuestDetailPanel
+                        detail={detail}
+                        onCheckIn={(b) => handleCheckIn(detail, b)}
+                        onCheckOut={(b) => handleCheckOut(detail, b)}
+                      />
                     )}
                   </div>
                 )}
@@ -211,11 +316,39 @@ export default function StaffGuestsPage() {
           })}
         </div>
       )}
+
+      {/* Modals */}
+      <CheckInModal
+        booking={checkInBooking}
+        onClose={() => setCheckInBooking(null)}
+        onSuccess={() => {
+          const id = expandedId
+          setCheckInBooking(null)
+          if (id) reloadDetail(id)
+        }}
+      />
+      <CheckOutModal
+        booking={checkOutBooking}
+        onClose={() => setCheckOutBooking(null)}
+        onSuccess={() => {
+          const id = expandedId
+          setCheckOutBooking(null)
+          if (id) reloadDetail(id)
+        }}
+      />
     </div>
   )
 }
 
-function GuestDetailPanel({ detail }: { detail: GuestDetail }) {
+function GuestDetailPanel({
+  detail,
+  onCheckIn,
+  onCheckOut,
+}: {
+  detail: GuestDetail
+  onCheckIn: (booking: DetailBooking) => void
+  onCheckOut: (booking: DetailBooking) => void
+}) {
   const { guestProfile, bookings, loyalty, user } = detail
   const preferences = guestProfile?.preferences || {}
   const activePrefs = Object.entries(preferences).filter(([, v]) => v).map(([k]) => k)
@@ -268,26 +401,54 @@ function GuestDetailPanel({ detail }: { detail: GuestDetail }) {
         {bookings.length === 0 ? (
           <p className="text-foreground-tertiary text-sm">No bookings yet</p>
         ) : (
-          <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
-            {bookings.map(b => (
-              <div key={b.id} className="border border-border rounded-lg px-3 py-2.5 bg-foreground-inverse">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-foreground text-sm font-medium truncate">
-                      {b.room.roomType.name} · Room {b.room.number}
-                    </p>
-                    <p className="text-foreground-tertiary text-xs">
-                      {new Date(b.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – {new Date(b.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </p>
+          <div className="flex flex-col gap-2 max-h-[340px] overflow-y-auto">
+            {bookings.map(b => {
+              const canCheckIn = isCheckInReady(b)
+              const canCheckOut = b.status === 'CHECKED_IN'
+              return (
+                <div key={b.id} className="border border-border rounded-lg px-3 py-2.5 bg-foreground-inverse">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-foreground text-sm font-medium truncate">
+                        {b.room.roomType.name} · Room {b.room.number}
+                      </p>
+                      <p className="text-foreground-tertiary text-xs">
+                        {new Date(b.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – {new Date(b.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <StatusBadge status={b.status} />
+                      <p className="text-foreground text-xs font-semibold">${Number(b.totalAmount).toFixed(2)}</p>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <StatusBadge status={b.status} />
-                    <p className="text-foreground text-xs font-semibold">${Number(b.totalAmount).toFixed(2)}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-foreground-tertiary text-[10px]">{b.bookingRef}</p>
+                    {(canCheckIn || canCheckOut) && (
+                      <div className="flex gap-1">
+                        {canCheckIn && (
+                          <button
+                            onClick={() => onCheckIn(b)}
+                            className="inline-flex items-center gap-1 bg-foreground text-foreground-inverse text-[11px] font-semibold px-2.5 py-1 rounded-md hover:opacity-90"
+                          >
+                            <HiOutlineLogin size={12} />
+                            Check In
+                          </button>
+                        )}
+                        {canCheckOut && (
+                          <button
+                            onClick={() => onCheckOut(b)}
+                            className="inline-flex items-center gap-1 bg-warning text-foreground-inverse text-[11px] font-semibold px-2.5 py-1 rounded-md hover:opacity-90"
+                          >
+                            <HiOutlineLogout size={12} />
+                            Check Out
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <p className="text-foreground-tertiary text-[10px] mt-1">{b.bookingRef}</p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
