@@ -312,17 +312,21 @@ model ServiceMenuItem {
 }
 
 model RoomServiceOrder {
-  id           String      @id @default(cuid())
-  bookingId    String
-  guestId      String
-  items        Json
-  totalAmount  Decimal
-  status       OrderStatus @default(PENDING)
-  instructions String?
-  estimatedAt  DateTime?
-  deliveredAt  DateTime?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id                  String      @id @default(cuid())
+  bookingId           String
+  guestId             String
+  items               Json
+  totalAmount         Decimal
+  status              OrderStatus @default(PENDING)
+  instructions        String?
+  estimatedAt         DateTime?
+  deliveredAt         DateTime?
+  isSettled           Boolean     @default(false)
+  settledAt           DateTime?
+  settlementMethod    String?
+  settlementReference String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
   booking Booking @relation(fields: [bookingId], references: [id])
   guest   User    @relation(fields: [guestId], references: [id])

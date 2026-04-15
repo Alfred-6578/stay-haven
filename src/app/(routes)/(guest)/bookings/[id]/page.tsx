@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import Button from '@/component/ui/Button'
 import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
+import PayRoomServiceModal from '@/component/room-service/PayRoomServiceModal'
 import { HiOutlineCalendar, HiOutlineUsers, HiOutlineArrowLeft } from 'react-icons/hi'
 import { MdOutlineKingBed } from 'react-icons/md'
 import { BsShieldCheck } from 'react-icons/bs'
@@ -48,6 +49,11 @@ interface BookingDetail {
   serviceBookings: Array<{ id: string; amount: string | number; status: string; service: { name: string; category: string } }>
   upgradeRequest: { id: string; status: string; requestedType: { name: string; basePrice: string | number } } | null
   stayExtension: { id: string; status: string; newCheckOut: string; additionalNights: number; additionalAmount: string | number } | null
+  roomServiceBalance: {
+    unsettledTotal: number
+    settledTotal: number
+    unsettledOrders: Array<{ id: string; totalAmount: number; status: string; createdAt: string }>
+  }
 }
 
 const statusColors: Record<string, string> = {
@@ -65,15 +71,21 @@ export default function BookingDetailPage() {
   const [booking, setBooking] = useState<BookingDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [cancelling, setCancelling] = useState(false)
+  const [payOpen, setPayOpen] = useState(false)
+
+  const refreshBooking = async () => {
+    try {
+      const res = await api.get(`/guest/bookings/${id}`)
+      setBooking(res.data.data)
+    } catch {}
+  }
 
   useEffect(() => {
     (async () => {
-      try {
-        const res = await api.get(`/guest/bookings/${id}`)
-        setBooking(res.data.data)
-      } catch {}
+      await refreshBooking()
       setLoading(false)
     })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const handleCancel = async () => {
@@ -244,6 +256,38 @@ export default function BookingDetailPage() {
             )}
           </div>
 
+          {/* Room Service Balance */}
+          {booking.roomServiceBalance && (booking.roomServiceBalance.unsettledTotal > 0 || booking.roomServiceBalance.settledTotal > 0) && (
+            <div className={`border rounded-xl p-5 ${booking.roomServiceBalance.unsettledTotal > 0 ? 'border-warning/30 bg-warning-bg/30' : 'border-border'}`}>
+              <h3 className="text-foreground font-semibold text-sm mb-3">Room Service</h3>
+              {booking.roomServiceBalance.unsettledTotal > 0 ? (
+                <>
+                  <p className="text-foreground-tertiary text-[11px] uppercase tracking-wider font-semibold">Outstanding balance</p>
+                  <p className="text-foreground text-2xl font-bold mt-1">₦{booking.roomServiceBalance.unsettledTotal.toLocaleString()}</p>
+                  <p className="text-foreground-secondary text-xs mt-2">
+                    {booking.roomServiceBalance.unsettledOrders.length} order{booking.roomServiceBalance.unsettledOrders.length !== 1 ? 's' : ''} pending payment. Pay now or settle at check-out.
+                  </p>
+                  <button
+                    onClick={() => setPayOpen(true)}
+                    className="mt-3 w-full bg-foreground text-foreground-inverse rounded-lg py-2.5 text-sm font-semibold hover:opacity-90"
+                  >
+                    Pay Now
+                  </button>
+                  {booking.roomServiceBalance.settledTotal > 0 && (
+                    <p className="text-foreground-tertiary text-xs mt-1">
+                      ₦{booking.roomServiceBalance.settledTotal.toLocaleString()} already settled
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-foreground-secondary text-sm">Settled</span>
+                  <span className="text-foreground font-semibold text-sm">₦{booking.roomServiceBalance.settledTotal.toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex flex-col gap-2">
             {canCancel && (
@@ -272,6 +316,19 @@ export default function BookingDetailPage() {
           </div>
         </div>
       </div>
+
+      {booking.roomServiceBalance && booking.roomServiceBalance.unsettledTotal > 0 && (
+        <PayRoomServiceModal
+          open={payOpen}
+          bookingId={booking.id}
+          amount={booking.roomServiceBalance.unsettledTotal}
+          onClose={() => setPayOpen(false)}
+          onPaid={() => {
+            setPayOpen(false)
+            refreshBooking()
+          }}
+        />
+      )}
     </div>
   )
 }

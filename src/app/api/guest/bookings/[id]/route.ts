@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, RouteContext, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
+import { getRoomServiceBalance } from "@/lib/roomServiceBalance";
 
 export const GET = withAuth<{ id: string }>(
   async (
@@ -60,10 +61,13 @@ export const GET = withAuth<{ id: string }>(
         );
       }
 
+      const roomServiceBalance = await getRoomServiceBalance(booking.id);
+
       return successResponse({
         ...booking,
         daysUntilCheckIn,
         nightsStayed,
+        roomServiceBalance,
       });
     } catch (error) {
       console.error("Guest booking detail error:", error);

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, RouteContext, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
+import { getRoomServiceBalance } from "@/lib/roomServiceBalance";
 
 // GET — booking detail
 export const GET = withAuth<{ id: string }>(
@@ -51,7 +52,8 @@ export const GET = withAuth<{ id: string }>(
         return errorResponse("Forbidden", 403);
       }
 
-      return successResponse(booking);
+      const roomServiceBalance = await getRoomServiceBalance(booking.id);
+      return successResponse({ ...booking, roomServiceBalance });
     } catch (error) {
       console.error("Get booking error:", error);
       return errorResponse("Internal server error", 500);

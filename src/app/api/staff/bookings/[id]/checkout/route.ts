@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, RouteContext } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
+import { getRoomServiceBalance } from "@/lib/roomServiceBalance";
 
 export const POST = withAuth<{ id: string }>(
   async (request: NextRequest, ctx: RouteContext<{ id: string }>) => {
@@ -35,6 +36,15 @@ export const POST = withAuth<{ id: string }>(
       if (booking.roomServiceOrders.length > 0 && !force) {
         return errorResponse(
           `There are ${booking.roomServiceOrders.length} pending room service order(s). Use ?force=true to override.`,
+          409
+        );
+      }
+
+      // Block check-out if there's an unsettled room service balance (unless forced)
+      const balance = await getRoomServiceBalance(booking.id);
+      if (balance.unsettledTotal > 0 && !force) {
+        return errorResponse(
+          `Outstanding room service bill of ₦${balance.unsettledTotal.toLocaleString()} across ${balance.unsettledOrders.length} order(s). Settle before check-out or use ?force=true.`,
           409
         );
       }
