@@ -15,7 +15,7 @@ import {
   HiOutlineMenu,
   HiOutlineX,
 } from 'react-icons/hi'
-import { MdOutlineMiscellaneousServices, MdOutlineUpgrade } from 'react-icons/md'
+import { MdOutlineMiscellaneousServices, MdOutlineUpgrade, MdOutlineRoomService } from 'react-icons/md'
 import { TbCalendarPlus } from 'react-icons/tb'
 
 const navItems = [
@@ -25,6 +25,7 @@ const navItems = [
   { href: '/admin/staff', label: 'Staff', icon: HiOutlineUsers },
   { href: '/admin/guests', label: 'Guests', icon: HiOutlineUserGroup },
   { href: '/admin/services', label: 'Services', icon: MdOutlineMiscellaneousServices },
+  { href: '/admin/room-service', label: 'Room Service', icon: MdOutlineRoomService },
   { href: '/admin/upgrades', label: 'Upgrades', icon: MdOutlineUpgrade },
   { href: '/admin/extensions', label: 'Extensions', icon: TbCalendarPlus },
   { href: '/admin/loyalty', label: 'Loyalty', icon: HiOutlineStar },
