@@ -370,6 +370,62 @@ export async function passwordResetEmail(
   });
 }
 
+export async function serviceBookingEmail(
+  user: { firstName: string; email: string },
+  service: { name: string; category: string },
+  booking: { bookingRef: string },
+  scheduledAt: Date,
+  amount: number | string
+): Promise<boolean> {
+  const dateStr = new Date(scheduledAt).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const timeStr = new Date(scheduledAt).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  return sendEmail({
+    to: user.email,
+    subject: `Service Request Submitted — ${service.name}`,
+    html: emailLayout(`
+      <h1 style="margin: 0 0 8px; font-size: 24px; font-weight: 700; color: #0B1B3A;">
+        Service Request Received
+      </h1>
+      <div style="width: 48px; height: 3px; background: #D97706; border-radius: 2px; margin: 0 0 20px;"></div>
+      <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.7;">
+        Hello ${user.firstName}, your service request has been submitted and is pending confirmation by our team.
+      </p>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 0 0 24px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+        <tr>
+          <td style="padding: 24px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              ${infoRow("Service", service.name)}
+              ${infoRow("Category", service.category.charAt(0) + service.category.slice(1).toLowerCase())}
+              ${infoRow("Scheduled", `${dateStr} at ${timeStr}`)}
+              ${infoRow("Booking", booking.bookingRef)}
+              <tr>
+                <td style="padding: 14px 0 0; font-size: 13px; color: #6b7280; width: 140px;">Amount</td>
+                <td style="padding: 14px 0 0; font-size: 20px; color: #D97706; font-weight: 700;">\u20A6${Number(amount).toLocaleString()}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.7;">
+        You&rsquo;ll receive a confirmation once our team approves the request. If you need to cancel, you can do so from your dashboard up to 24 hours before the scheduled time.
+      </p>
+      ${primaryButton(`${CLIENT_URL}/services`, "View My Services")}
+      <p style="margin: 0; font-size: 13px; color: #9ca3af; line-height: 1.6;">
+        Questions? Reply to this email or contact the front desk.
+      </p>
+    `),
+  });
+}
+
 export async function overstayWarningEmail(
   user: { firstName: string; email: string },
   booking: { bookingRef: string; checkOut: Date }

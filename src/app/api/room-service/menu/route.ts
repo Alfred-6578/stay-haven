@@ -15,11 +15,14 @@ const CATEGORIES = [
 
 type Category = (typeof CATEGORIES)[number];
 
-// GET — public, grouped by category
-export async function GET() {
+// GET — public, grouped by category. Pass ?all=true to include disabled items (admin).
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const showAll = searchParams.get("all") === "true";
+
     const items = await prisma.serviceMenuItem.findMany({
-      where: { isAvailable: true },
+      where: showAll ? {} : { isAvailable: true },
       orderBy: [{ category: "asc" }, { name: "asc" }],
       select: {
         id: true,
@@ -29,6 +32,7 @@ export async function GET() {
         category: true,
         image: true,
         prepMinutes: true,
+        isAvailable: true,
       },
     });
 
