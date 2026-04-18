@@ -3,26 +3,14 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
-import { LOYALTY_TIERS } from "@/lib/loyalty";
+import { calculateTier } from "@/lib/loyalty";
+import { createNotification } from "@/lib/notifications";
 
 const awardSchema = z.object({
-  guestId: z.string().min(1),
+  userId: z.string().min(1),
   points: z.number().int().refine((p) => p !== 0, "Points cannot be zero"),
   description: z.string().min(1).max(200),
 });
-
-function tierForPoints(lifetimePoints: number): keyof typeof LOYALTY_TIERS {
-  const order: Array<keyof typeof LOYALTY_TIERS> = [
-    "PLATINUM",
-    "GOLD",
-    "SILVER",
-    "BRONZE",
-  ];
-  for (const tier of order) {
-    if (lifetimePoints >= LOYALTY_TIERS[tier].threshold) return tier;
-  }
-  return "BRONZE";
-}
 
 export const POST = withAuth(
   async (request: NextRequest) => {
@@ -36,10 +24,10 @@ export const POST = withAuth(
         return errorResponse(message, 422);
       }
 
-      const { guestId, points, description } = parsed.data;
+      const { userId, points, description } = parsed.data;
 
       const guest = await prisma.user.findFirst({
-        where: { id: guestId, role: "GUEST", isDeleted: false },
+        where: { id: userId, role: "GUEST", isDeleted: false },
         include: { guestProfile: true },
       });
 
@@ -55,26 +43,27 @@ export const POST = withAuth(
         );
       }
 
-      // Only bonuses count toward lifetime (deductions don't)
+      // Only positive points count toward lifetime (deductions don't)
       const newLifetime =
         points > 0
           ? guest.guestProfile.lifetimePoints + points
           : guest.guestProfile.lifetimePoints;
 
-      const newTier = tierForPoints(newLifetime);
+      const newTier = calculateTier(newLifetime);
+      const tierChanged = guest.guestProfile.loyaltyTier !== newTier;
 
       const result = await prisma.$transaction(async (tx) => {
         const transaction = await tx.loyaltyTransaction.create({
           data: {
-            guestId,
+            guestId: userId,
             points,
-            type: points > 0 ? "BONUS" : "ADJUSTMENT",
+            type: points > 0 ? "EARNED" : "ADJUSTMENT",
             description,
           },
         });
 
         const profile = await tx.guestProfile.update({
-          where: { userId: guestId },
+          where: { userId },
           data: {
             totalPoints: newTotal,
             lifetimePoints: newLifetime,
@@ -82,26 +71,27 @@ export const POST = withAuth(
           },
         });
 
-        await tx.notification.create({
-          data: {
-            userId: guestId,
-            title: points > 0 ? "Points Awarded" : "Points Adjusted",
-            message:
-              points > 0
-                ? `You earned ${points} bonus points: ${description}`
-                : `${Math.abs(points)} points were deducted: ${description}`,
-            type: points > 0 ? "POINTS_EARNED" : "GENERAL",
-          },
-        });
-
         return { transaction, profile };
+      });
+
+      // Notification
+      await createNotification({
+        userId,
+        title: points > 0 ? "Points Awarded" : "Points Adjusted",
+        message:
+          points > 0
+            ? `You received ${points} bonus points from StayHaven! ${description}`
+            : `${Math.abs(points)} points were deducted: ${description}`,
+        type: points > 0 ? "POINTS_EARNED" : "GENERAL",
       });
 
       return successResponse(
         {
           transaction: result.transaction,
-          profile: result.profile,
-          tierChanged: guest.guestProfile.loyaltyTier !== newTier,
+          newBalance: result.profile.totalPoints,
+          newLifetime: result.profile.lifetimePoints,
+          tier: result.profile.loyaltyTier,
+          tierChanged,
         },
         points > 0 ? "Points awarded" : "Points adjusted"
       );

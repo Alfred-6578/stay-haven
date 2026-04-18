@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
+import { POINTS_VALUE_NGN } from "@/lib/loyalty";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
@@ -52,7 +53,7 @@ export const POST = withAuth(
 
       // Loyalty discount on the group total
       const pts = Math.max(0, Number(pointsUsed) || 0);
-      const discount = pts > 0 ? (pts / 100) * 10 : 0;
+      const discount = pts > 0 ? pts * POINTS_VALUE_NGN : 0;
       const amount = Math.max(0, rawTotal - discount);
       const amountInKobo = Math.round(amount * 100);
 

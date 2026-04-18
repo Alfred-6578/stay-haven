@@ -8,7 +8,7 @@ import {
   generateBookingRef,
   checkRoomAvailability,
 } from "@/lib/bookingUtils";
-import { LOYALTY_TIERS } from "@/lib/loyalty";
+import { calculateTier, calculatePointsEarned } from "@/lib/loyalty";
 import { createNotification } from "@/lib/notifications";
 import { bookingConfirmationEmail, walkInActivationEmail } from "@/lib/email";
 
@@ -17,18 +17,7 @@ const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
 type PaymentMethod = "CASH" | "POS" | "BANK_TRANSFER";
 const VALID_METHODS: PaymentMethod[] = ["CASH", "POS", "BANK_TRANSFER"];
 
-function tierForPoints(lifetimePoints: number): keyof typeof LOYALTY_TIERS {
-  const order: Array<keyof typeof LOYALTY_TIERS> = [
-    "PLATINUM",
-    "GOLD",
-    "SILVER",
-    "BRONZE",
-  ];
-  for (const tier of order) {
-    if (lifetimePoints >= LOYALTY_TIERS[tier].threshold) return tier;
-  }
-  return "BRONZE";
-}
+// tierForPoints and calculatePointsEarned imported from @/lib/loyalty
 
 /**
  * Distribute total adults greedily across rooms, respecting each room's
@@ -346,10 +335,14 @@ export const POST = withAuth(
       checkInDayStart.setHours(0, 0, 0, 0);
       const isCheckInToday = checkInDayStart.getTime() === today.getTime();
 
-      // Match the online Paystack booking path (1 point per naira).
-      // Keeping rates parallel so walk-in and online bookings accrue
-      // loyalty identically.
-      const pointsEarned = Math.floor(amountReceived);
+      // Earn points based on the guest's current tier (3–5% effective return).
+      // We need the guest's tier before the transaction to pick the right rate.
+      const preProfile = await prisma.guestProfile.findUnique({
+        where: { userId: resolvedUser.id },
+        select: { loyaltyTier: true },
+      });
+      const guestTier = preProfile?.loyaltyTier || "BRONZE";
+      const pointsEarned = calculatePointsEarned(amountReceived, guestTier);
 
       // Pre-generate N sequential booking refs. generateBookingRef() uses
       // count+1 — calling it in a loop before any rows are created would
@@ -445,7 +438,7 @@ export const POST = withAuth(
         if (profile) {
           if (pointsEarned > 0) {
             const newLifetime = profile.lifetimePoints + pointsEarned;
-            const newTier = tierForPoints(newLifetime);
+            const newTier = calculateTier(newLifetime);
             await tx.guestProfile.update({
               where: { userId: resolvedUser!.id },
               data: {
