@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
+import { POINTS_VALUE_NGN } from "@/lib/loyalty";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
@@ -29,10 +30,10 @@ export const POST = withAuth(
         return errorResponse("Booking is not in PENDING state", 422);
       }
 
-      // Calculate discount from points
+      // Calculate discount from points (1 pt = ₦POINTS_VALUE_NGN)
       let discount = 0;
       if (pointsUsed && pointsUsed > 0) {
-        discount = (pointsUsed / 100) * 10; // 100 pts = $10
+        discount = pointsUsed * POINTS_VALUE_NGN;
       }
 
       const amount = Math.max(0, Number(booking.totalAmount) - discount);

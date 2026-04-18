@@ -3,24 +3,13 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { withAuth, RouteContext, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
-import { LOYALTY_TIERS } from "@/lib/loyalty";
+import { calculateTier, calculatePointsEarned } from "@/lib/loyalty";
 import { createNotification } from "@/lib/notifications";
 import { bookingConfirmationEmail } from "@/lib/email";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
-function tierForPoints(lifetimePoints: number): keyof typeof LOYALTY_TIERS {
-  const order: Array<keyof typeof LOYALTY_TIERS> = [
-    "PLATINUM",
-    "GOLD",
-    "SILVER",
-    "BRONZE",
-  ];
-  for (const t of order) {
-    if (lifetimePoints >= LOYALTY_TIERS[t].threshold) return t;
-  }
-  return "BRONZE";
-}
+// calculateTier and calculatePointsEarned imported from @/lib/loyalty
 
 export const GET = withAuth<{ reference: string }>(
   async (
@@ -90,7 +79,15 @@ export const GET = withAuth<{ reference: string }>(
         0
       );
       const netPaid = Math.max(0, groupTotal - totalDiscount);
-      const pointsEarned = Math.floor(netPaid); // 1 point per naira (matches single-booking path)
+      // Earn points at the guest's current tier rate (3–5% effective return)
+      const preProfile = await prisma.guestProfile.findUnique({
+        where: { userId: user.id },
+        select: { loyaltyTier: true },
+      });
+      const pointsEarned = calculatePointsEarned(
+        netPaid,
+        preProfile?.loyaltyTier || "BRONZE"
+      );
 
       const firstBookingId = bookings[0]?.id;
 
@@ -190,7 +187,7 @@ export const GET = withAuth<{ reference: string }>(
               totalPoints: newTotal,
               lifetimePoints: newLifetime,
               totalSpend: { increment: netPaid },
-              loyaltyTier: tierForPoints(newLifetime),
+              loyaltyTier: calculateTier(newLifetime),
             },
           });
         }

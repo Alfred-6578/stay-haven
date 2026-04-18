@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import Button from '@/component/ui/Button'
 import { HiOutlineStar } from 'react-icons/hi'
+import { POINTS_VALUE_NGN } from '@/lib/loyalty'
 
 interface Props {
   totalPoints: number
@@ -10,12 +11,17 @@ interface Props {
   onSkip: () => void
 }
 
-const POINTS_TO_CURRENCY = 10 // 100 pts = ₦1000 → 1 pt = ₦10 → in dollars: 100pts = $10
+const formatNaira = (v: number) =>
+  `₦${new Intl.NumberFormat('en-NG', { maximumFractionDigits: 0 }).format(v)}`
 
 const BookingStepLoyalty = ({ totalPoints, totalAmount, onApply, onSkip }: Props) => {
-  const maxRedeemable = Math.min(totalPoints, Math.floor(totalAmount / POINTS_TO_CURRENCY * 100)) // max points that don't exceed total
+  // Max points the guest can use: capped so discount doesn't exceed totalAmount
+  const maxRedeemable = Math.min(
+    totalPoints,
+    Math.floor(totalAmount / POINTS_VALUE_NGN)
+  )
   const [pointsToUse, setPointsToUse] = useState(0)
-  const discount = (pointsToUse / 100) * POINTS_TO_CURRENCY
+  const discount = pointsToUse * POINTS_VALUE_NGN
   const newTotal = Math.max(0, totalAmount - discount)
 
   if (totalPoints === 0) {
@@ -53,7 +59,7 @@ const BookingStepLoyalty = ({ totalPoints, totalAmount, onApply, onSkip }: Props
             </div>
           </div>
           <p className="text-foreground-tertiary text-sm">
-            Worth <span className="text-foreground font-medium">${(totalPoints / 100 * POINTS_TO_CURRENCY).toFixed(0)}</span>
+            Worth <span className="text-foreground font-medium">{formatNaira(totalPoints * POINTS_VALUE_NGN)}</span>
           </p>
         </div>
 
@@ -67,7 +73,7 @@ const BookingStepLoyalty = ({ totalPoints, totalAmount, onApply, onSkip }: Props
             type="range"
             min={0}
             max={maxRedeemable}
-            step={100}
+            step={1}
             value={pointsToUse}
             onChange={(e) => setPointsToUse(Number(e.target.value))}
             className="w-full accent-foreground"
@@ -75,6 +81,9 @@ const BookingStepLoyalty = ({ totalPoints, totalAmount, onApply, onSkip }: Props
           <div className="text-center mt-2">
             <span className="text-foreground font-bold text-lg">{pointsToUse.toLocaleString()}</span>
             <span className="text-foreground-tertiary text-sm ml-1">points</span>
+            {pointsToUse > 0 && (
+              <span className="text-success text-sm ml-2">= {formatNaira(discount)} off</span>
+            )}
           </div>
         </div>
       </div>
@@ -83,17 +92,17 @@ const BookingStepLoyalty = ({ totalPoints, totalAmount, onApply, onSkip }: Props
       <div className="border border-border rounded-2xl p-5 vsm:p-6 mb-8">
         <div className="flex justify-between text-sm text-foreground-secondary mb-2">
           <span>Booking total</span>
-          <span>${totalAmount.toFixed(0)}</span>
+          <span>{formatNaira(totalAmount)}</span>
         </div>
         {pointsToUse > 0 && (
           <div className="flex justify-between text-sm text-success mb-2">
             <span>Points discount ({pointsToUse} pts)</span>
-            <span>-${discount.toFixed(0)}</span>
+            <span>-{formatNaira(discount)}</span>
           </div>
         )}
         <div className="flex justify-between text-foreground font-bold text-lg pt-3 border-t border-border mt-2">
           <span>You pay</span>
-          <span>${newTotal.toFixed(0)}</span>
+          <span>{formatNaira(newTotal)}</span>
         </div>
       </div>
 

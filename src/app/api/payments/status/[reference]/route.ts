@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth, RouteContext } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
 import { bookingConfirmationEmail } from "@/lib/email";
+import { calculatePointsEarned } from "@/lib/loyalty";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
@@ -92,13 +93,15 @@ export const GET = withAuth<{ reference: string }>(
             }
           }
 
-          // Earn points (1 point per $1 spent)
-          const pointsEarned = Math.floor(Number(payment.amount));
-          if (pointsEarned > 0) {
-            const guestProfile = await prisma.guestProfile.findUnique({
-              where: { userId: payment.booking.guestId },
-            });
-            if (guestProfile) {
+          // Earn points (tier-based: 3–5% effective return)
+          const guestProfile = await prisma.guestProfile.findUnique({
+            where: { userId: payment.booking.guestId },
+          });
+          const pointsEarned = calculatePointsEarned(
+            Number(payment.amount),
+            guestProfile?.loyaltyTier || "BRONZE"
+          );
+          if (pointsEarned > 0 && guestProfile) {
               await prisma.guestProfile.update({
                 where: { id: guestProfile.id },
                 data: {
@@ -116,7 +119,6 @@ export const GET = withAuth<{ reference: string }>(
                   bookingId: payment.booking.id,
                 },
               });
-            }
           }
 
           // Notification

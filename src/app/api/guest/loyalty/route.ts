@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
-import { getNextTier, getTierProgress } from "@/lib/loyalty";
+import { getNextTier, getTierProgress, POINTS_VALUE_NGN } from "@/lib/loyalty";
 
 export const GET = withAuth(
   async (_request: NextRequest, _ctx, user: AuthUser) => {
@@ -37,7 +37,7 @@ export const GET = withAuth(
         tier: guestProfile.loyaltyTier,
         totalPoints: guestProfile.totalPoints,
         lifetimePoints: guestProfile.lifetimePoints,
-        pointsValue: guestProfile.totalPoints * 10,
+        pointsValue: guestProfile.totalPoints * POINTS_VALUE_NGN,
         nextTier,
         tierProgress,
         recentTransactions: recentTransactions.map((t) => ({
