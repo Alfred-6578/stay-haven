@@ -1,5 +1,6 @@
 'use client'
 import React, { useState } from 'react'
+import { HiOutlineExclamation } from 'react-icons/hi'
 import RoomActionSheet from './RoomActionSheet'
 
 export interface StaffRoom {
@@ -12,10 +13,13 @@ export interface StaffRoom {
   currentBooking: {
     id: string
     bookingRef: string
+    status: string
     checkIn: string
     checkOut: string
     guest: { firstName: string; lastName: string }
   } | null
+  bookingStatus: string | null
+  isNoShow: boolean
 }
 
 interface FloorGroup {
@@ -28,7 +32,7 @@ interface Props {
   onRoomUpdated: () => void
 }
 
-const statusStyles: Record<StaffRoom['status'], { bg: string; label: string; text: string }> = {
+const statusStyles: Record<string, { bg: string; label: string; text: string }> = {
   AVAILABLE: { bg: 'bg-[#EAF3DE]', label: 'Available', text: 'text-[#4A6B2E]' },
   OCCUPIED: { bg: 'bg-[#FAECE7]', label: 'Occupied', text: 'text-[#8A4A30]' },
   CLEANING: { bg: 'bg-[#FAEEDA]', label: 'Cleaning', text: 'text-[#8A6A20]' },
@@ -36,26 +40,44 @@ const statusStyles: Record<StaffRoom['status'], { bg: string; label: string; tex
 }
 
 const RoomStatusCard = ({ room, onClick }: { room: StaffRoom; onClick: () => void }) => {
-  const style = statusStyles[room.status]
+  const style = statusStyles[room.status] || statusStyles.AVAILABLE
+
+  // Override styling for no-show rooms
+  const isNoShow = room.isNoShow
+  const cardBg = isNoShow ? 'bg-danger-bg' : style.bg
+
   return (
     <button
       onClick={onClick}
-      className={`${style.bg} rounded-xl p-4 text-left hover:ring-2 hover:ring-foreground/20 transition-all min-h-[110px] flex flex-col justify-between`}
+      className={`${cardBg} rounded-xl p-4 text-left hover:ring-2 hover:ring-foreground/20 transition-all min-h-[110px] flex flex-col justify-between relative`}
     >
+      {isNoShow && (
+        <div className="absolute top-2 right-2">
+          <HiOutlineExclamation size={16} className="text-danger" />
+        </div>
+      )}
       <div className="flex items-start justify-between gap-2">
         <span className="text-foreground font-bold text-2xl leading-none">{room.number}</span>
-        <span className={`${style.text} text-[10px] font-semibold uppercase tracking-wider`}>{style.label}</span>
+        <span className={`${isNoShow ? 'text-danger' : style.text} text-[10px] font-semibold uppercase tracking-wider`}>
+          {isNoShow ? 'No-Show' : style.label}
+        </span>
       </div>
       <div className="mt-2">
         <p className="text-foreground-secondary text-[11px] truncate">{room.roomType.name}</p>
-        {room.status === 'OCCUPIED' && room.currentBooking && (
+        {room.currentBooking && (
           <>
             <p className="text-foreground text-xs font-medium truncate mt-1">
               {room.currentBooking.guest.firstName} {room.currentBooking.guest.lastName}
             </p>
-            <p className="text-foreground-tertiary text-[10px]">
-              Out: {new Date(room.currentBooking.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            </p>
+            {isNoShow ? (
+              <p className="text-danger text-[10px] font-semibold">
+                Expected {new Date(room.currentBooking.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </p>
+            ) : (
+              <p className="text-foreground-tertiary text-[10px]">
+                Out: {new Date(room.currentBooking.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </p>
+            )}
           </>
         )}
       </div>

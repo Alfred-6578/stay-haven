@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { HiOutlineX, HiOutlineCheck, HiOutlineSparkles, HiOutlineCog } from 'react-icons/hi'
+import { HiOutlineX, HiOutlineCheck, HiOutlineSparkles, HiOutlineCog, HiOutlineExclamation } from 'react-icons/hi'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
 import type { StaffRoom } from './RoomStatusBoard'
@@ -49,14 +49,31 @@ const RoomActionSheet = ({ room, onClose, onUpdated }: Props) => {
     }
   }
 
+  const handleMarkNoShow = async () => {
+    if (!room.currentBooking) return
+    setLoading(true)
+    try {
+      await api.post(`/staff/bookings/${room.currentBooking.id}/no-show`)
+      toast.success(
+        `${room.currentBooking.guest.firstName} ${room.currentBooking.guest.lastName} marked as no-show — Room ${room.number} freed`
+      )
+      onUpdated()
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to mark no-show'
+      toast.error(msg)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const canAction = (status: ActionStatus) => room.status !== status
+  const isNoShow = room.isNoShow
+  // Show status actions for non-occupied rooms OR no-show rooms (since the room should be freed)
+  const showStatusActions = room.status !== 'OCCUPIED' || isNoShow
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-foreground/40" onClick={loading ? undefined : onClose} />
-
-      {/* Sheet: bottom on mobile, right side panel on desktop */}
       <div className="relative ml-auto w-full vsm:max-w-md bg-foreground-inverse h-full vsm:h-auto vsm:my-auto vsm:mr-6 vsm:rounded-2xl shadow-xl flex flex-col mt-auto max-h-[85vh] vsm:max-h-[calc(100vh-3rem)] rounded-t-2xl vsm:rounded-2xl animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -82,7 +99,9 @@ const RoomActionSheet = ({ room, onClose, onUpdated }: Props) => {
             </div>
             <div>
               <p className="text-foreground-tertiary text-[11px] uppercase tracking-wider">Status</p>
-              <p className="text-foreground text-sm font-medium">{room.status}</p>
+              <p className="text-foreground text-sm font-medium">
+                {isNoShow ? 'No-Show' : room.status}
+              </p>
             </div>
             {room.notes && (
               <div className="col-span-2">
@@ -92,8 +111,33 @@ const RoomActionSheet = ({ room, onClose, onUpdated }: Props) => {
             )}
           </div>
 
-          {/* Current guest (if occupied) */}
-          {room.status === 'OCCUPIED' && room.currentBooking && (
+          {/* No-show alert */}
+          {isNoShow && room.currentBooking && (
+            <div className="bg-danger-bg/40 border border-danger/30 rounded-xl p-4 mb-5">
+              <div className="flex items-start gap-2 mb-3">
+                <HiOutlineExclamation size={16} className="text-danger mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-foreground font-semibold text-sm">Guest Never Arrived</p>
+                  <p className="text-foreground-secondary text-xs mt-0.5">
+                    {room.currentBooking.guest.firstName} {room.currentBooking.guest.lastName} was expected on{' '}
+                    {new Date(room.currentBooking.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} but never checked in.
+                  </p>
+                  <p className="text-foreground-tertiary text-xs mt-0.5">{room.currentBooking.bookingRef}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleMarkNoShow}
+                disabled={loading}
+                className="w-full bg-danger text-foreground-inverse rounded-lg py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                {loading ? 'Marking…' : 'Mark as No-Show & Free Room'}
+              </button>
+            </div>
+          )}
+
+          {/* Current guest (if occupied and NOT a no-show) */}
+          {room.status === 'OCCUPIED' && room.currentBooking && !isNoShow && (
             <div className="bg-foreground-disabled/5 rounded-xl p-4 mb-5">
               <p className="text-foreground-tertiary text-[11px] uppercase tracking-wider mb-1">Current Guest</p>
               <p className="text-foreground font-semibold">
@@ -106,7 +150,7 @@ const RoomActionSheet = ({ room, onClose, onUpdated }: Props) => {
           )}
 
           {/* Actions */}
-          {room.status !== 'OCCUPIED' ? (
+          {showStatusActions && !isNoShow ? (
             <>
               <h4 className="text-foreground font-semibold text-sm mb-3">Actions</h4>
               <div className="flex flex-col gap-2">
@@ -133,7 +177,6 @@ const RoomActionSheet = ({ room, onClose, onUpdated }: Props) => {
                 })}
               </div>
 
-              {/* Notes input for cleaning/maintenance */}
               {pending && pending !== 'AVAILABLE' && (
                 <div className="mt-4">
                   <label className="text-foreground-tertiary text-[11px] uppercase tracking-wider">Notes (optional)</label>
@@ -147,7 +190,6 @@ const RoomActionSheet = ({ room, onClose, onUpdated }: Props) => {
                 </div>
               )}
 
-              {/* Confirm */}
               {pending && (
                 <div className="mt-5 border-t border-border pt-4">
                   <p className="text-foreground-secondary text-sm mb-3">
@@ -172,11 +214,11 @@ const RoomActionSheet = ({ room, onClose, onUpdated }: Props) => {
                 </div>
               )}
             </>
-          ) : (
+          ) : room.status === 'OCCUPIED' && !isNoShow ? (
             <div className="bg-warning-bg/30 border border-warning/20 rounded-lg p-4 text-sm text-foreground-secondary">
               Occupied rooms cannot have their status changed manually. Check the guest out first.
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

@@ -30,6 +30,7 @@ const STATUS_TABS = [
   { key: 'CHECKED_IN', label: 'Checked In' },
   { key: 'CHECKED_OUT', label: 'Checked Out' },
   { key: 'CANCELLED', label: 'Cancelled' },
+  { key: 'NO_SHOW', label: 'No-Show' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {

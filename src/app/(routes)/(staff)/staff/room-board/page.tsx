@@ -13,6 +13,8 @@ import {
 } from 'react-icons/hi'
 import CheckInModal, { CheckInBooking } from '@/component/staff/CheckInModal'
 import CheckOutModal, { CheckOutBooking } from '@/component/staff/CheckOutModal'
+import NoShowModal from '@/component/staff/NoShowModal'
+import OverstayModal from '@/component/staff/OverstayModal'
 
 type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE'
 
@@ -26,10 +28,13 @@ interface BoardRoom {
   currentBooking: {
     id: string
     bookingRef: string
+    status: string
     checkIn: string
     checkOut: string
     guest: { firstName: string; lastName: string }
   } | null
+  bookingStatus: string | null
+  isNoShow: boolean
 }
 
 interface FloorGroup {
@@ -59,6 +64,8 @@ export default function StaffRoomBoardPage() {
   const [checkOutBooking, setCheckOutBooking] = useState<CheckOutBooking | null>(null)
   const [statusRoom, setStatusRoom] = useState<BoardRoom | null>(null)
   const [statusUpdating, setStatusUpdating] = useState(false)
+  const [noShowRoom, setNoShowRoom] = useState<BoardRoom | null>(null)
+  const [overstayRoom, setOverstayRoom] = useState<BoardRoom | null>(null)
 
   const fetchAll = useCallback(async (opts: { silent?: boolean } = {}) => {
     if (!opts.silent) setLoading(true)
@@ -90,14 +97,25 @@ export default function StaffRoomBoardPage() {
   }, [fetchAll])
 
   const handleRoomClick = (room: BoardRoom) => {
+    // No-show room → open no-show modal
+    if (room.isNoShow && room.currentBooking) {
+      setNoShowRoom(room)
+      return
+    }
     if (room.status === 'OCCUPIED' && room.currentBooking) {
-      // Try to find in today's departures first (has full roomServiceOrders data)
+      // Check if this is an overdue checkout
+      const now = new Date()
+      const checkOut = new Date(room.currentBooking.checkOut)
+      if (checkOut < now) {
+        setOverstayRoom(room)
+        return
+      }
+      // Normal checkout — try today's departures first (has roomServiceOrders data)
       const existingDeparture = departures.find(d => d.id === room.currentBooking?.id)
       if (existingDeparture) {
         setCheckOutBooking(existingDeparture)
         return
       }
-      // Not checking out today — fetch full booking
       openCheckOutForBooking(room.currentBooking.id)
     } else {
       // AVAILABLE / CLEANING / MAINTENANCE → status change
@@ -153,12 +171,14 @@ export default function StaffRoomBoardPage() {
   // Stats strip
   const stats = useMemo(() => {
     const all = floors.flatMap(f => f.rooms)
+    const noShows = all.filter(r => r.isNoShow).length
     return {
       total: all.length,
-      occupied: all.filter(r => r.status === 'OCCUPIED').length,
-      available: all.filter(r => r.status === 'AVAILABLE').length,
+      occupied: all.filter(r => r.status === 'OCCUPIED' && !r.isNoShow).length,
+      available: all.filter(r => r.status === 'AVAILABLE' && !r.isNoShow).length,
       cleaning: all.filter(r => r.status === 'CLEANING').length,
       maintenance: all.filter(r => r.status === 'MAINTENANCE').length,
+      noShows,
     }
   }, [floors])
 
@@ -196,9 +216,12 @@ export default function StaffRoomBoardPage() {
       ) : (
         <>
           {/* Stats strip */}
-          <div className="grid grid-cols-2 vsm:grid-cols-4 gap-3 mb-6">
+          <div className={`grid grid-cols-2 ${stats.noShows > 0 ? 'vsm:grid-cols-5' : 'vsm:grid-cols-4'} gap-3 mb-6`}>
             <StatPill label="Occupied" value={stats.occupied} total={stats.total} color="#8A4A30" bg="#FAECE7" />
             <StatPill label="Available" value={stats.available} total={stats.total} color="#4A6B2E" bg="#EAF3DE" />
+            {stats.noShows > 0 && (
+              <StatPill label="No-Show" value={stats.noShows} total={stats.total} color="#DC2626" bg="#FEE2E2" />
+            )}
             <StatPill label="Cleaning" value={stats.cleaning} total={stats.total} color="#8A6A20" bg="#FAEEDA" />
             <StatPill label="Maintenance" value={stats.maintenance} total={stats.total} color="#5E5A4E" bg="#F1EFE8" />
           </div>
@@ -285,32 +308,47 @@ export default function StaffRoomBoardPage() {
                     </h3>
                     <div className="grid grid-cols-2 vsm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                       {rooms.map(room => {
+                        const isNoShow = room.isNoShow
                         const style = statusStyles[room.status]
+                        const cardBg = isNoShow ? 'bg-[#FEE2E2]' : style.bg
                         return (
                           <button
                             key={room.id}
                             onClick={() => handleRoomClick(room)}
-                            className={`${style.bg} rounded-xl p-3 text-left hover:ring-2 hover:ring-foreground/20 transition-all min-h-[130px] flex flex-col justify-between`}
+                            className={`${cardBg} rounded-xl p-3 text-left hover:ring-2 hover:ring-foreground/20 transition-all min-h-[130px] flex flex-col justify-between relative`}
                           >
+                            {isNoShow && (
+                              <div className="absolute top-2 right-2">
+                                <span className="bg-[#DC2626] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase">No-Show</span>
+                              </div>
+                            )}
                             <div className="flex items-start justify-between gap-2">
                               <span className="text-foreground font-bold text-xl leading-none">{room.number}</span>
-                              <span className={`${style.text} text-[9px] font-semibold uppercase tracking-wider`}>{style.label}</span>
+                              {!isNoShow && (
+                                <span className={`${style.text} text-[9px] font-semibold uppercase tracking-wider`}>{style.label}</span>
+                              )}
                             </div>
                             <div>
                               <p className="text-foreground-secondary text-[11px] truncate">{room.roomType.name}</p>
-                              {room.status === 'OCCUPIED' && room.currentBooking && (
+                              {room.currentBooking && (
                                 <>
                                   <p className="text-foreground text-xs font-medium truncate mt-1">
                                     {room.currentBooking.guest.firstName} {room.currentBooking.guest.lastName}
                                   </p>
-                                  <p className="text-foreground-tertiary text-[10px]">
-                                    Out: {new Date(room.currentBooking.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                  </p>
+                                  {isNoShow ? (
+                                    <p className="text-[#DC2626] text-[10px] font-semibold">
+                                      Expected {new Date(room.currentBooking.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </p>
+                                  ) : room.status === 'OCCUPIED' ? (
+                                    <p className="text-foreground-tertiary text-[10px]">
+                                      Out: {new Date(room.currentBooking.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </p>
+                                  ) : null}
                                 </>
                               )}
-                              {room.notes && room.status !== 'OCCUPIED' && (
+                              {room.notes && !room.currentBooking && (
                                 <p className="text-foreground-tertiary text-[10px] truncate mt-1" title={room.notes}>
-                                  📝 {room.notes}
+                                  {room.notes}
                                 </p>
                               )}
                             </div>
@@ -347,6 +385,39 @@ export default function StaffRoomBoardPage() {
           onChange={updateRoomStatus}
         />
       )}
+
+      {/* No-show modal */}
+      <NoShowModal
+        room={noShowRoom ? { id: noShowRoom.id, number: noShowRoom.number, floor: noShowRoom.floor, roomType: noShowRoom.roomType } : null}
+        booking={noShowRoom?.currentBooking ? {
+          id: noShowRoom.currentBooking.id,
+          bookingRef: noShowRoom.currentBooking.bookingRef,
+          checkIn: noShowRoom.currentBooking.checkIn,
+          guest: noShowRoom.currentBooking.guest,
+        } : null}
+        daysMissed={noShowRoom?.currentBooking ? Math.floor(
+          (new Date().getTime() - new Date(noShowRoom.currentBooking.checkIn).getTime()) / (1000 * 60 * 60 * 24)
+        ) : undefined}
+        onClose={() => setNoShowRoom(null)}
+        onSuccess={() => { setNoShowRoom(null); fetchAll({ silent: true }) }}
+      />
+
+      {/* Overstay modal */}
+      <OverstayModal
+        room={overstayRoom ? { id: overstayRoom.id, number: overstayRoom.number, floor: overstayRoom.floor, roomType: overstayRoom.roomType } : null}
+        booking={overstayRoom?.currentBooking ? {
+          id: overstayRoom.currentBooking.id,
+          bookingRef: overstayRoom.currentBooking.bookingRef,
+          checkIn: overstayRoom.currentBooking.checkIn,
+          checkOut: overstayRoom.currentBooking.checkOut,
+          guest: overstayRoom.currentBooking.guest,
+          hoursOverdue: Math.floor(
+            (new Date().getTime() - new Date(overstayRoom.currentBooking.checkOut).getTime()) / (1000 * 60 * 60)
+          ),
+        } : null}
+        onClose={() => setOverstayRoom(null)}
+        onSuccess={() => { setOverstayRoom(null); fetchAll({ silent: true }) }}
+      />
     </div>
   )
 }

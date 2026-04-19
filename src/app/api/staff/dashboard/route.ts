@@ -12,7 +12,7 @@ export const GET = withAuth(
       const endOfToday = new Date(now);
       endOfToday.setHours(23, 59, 59, 999);
 
-      const [todayArrivalsRaw, todayDeparturesRaw, overdueRaw, cleaningRaw] =
+      const [todayArrivalsRaw, todayDeparturesRaw, overdueRaw, cleaningRaw, noShowsRaw] =
         await Promise.all([
           prisma.booking.findMany({
             where: {
@@ -57,6 +57,23 @@ export const GET = withAuth(
             select: { id: true, number: true, floor: true, notes: true },
             orderBy: [{ floor: "asc" }, { number: "asc" }],
           }),
+          // No-shows: CONFIRMED bookings where check-in date has passed
+          prisma.booking.findMany({
+            where: {
+              status: "CONFIRMED",
+              checkIn: { lt: startOfToday },
+            },
+            include: {
+              guest: { select: { firstName: true, lastName: true, email: true } },
+              room: {
+                select: {
+                  number: true,
+                  roomType: { select: { name: true } },
+                },
+              },
+            },
+            orderBy: { checkIn: "asc" },
+          }),
         ]);
 
       const todayArrivals = todayArrivalsRaw.map((b) => ({
@@ -82,6 +99,7 @@ export const GET = withAuth(
       const overdueCheckouts = overdueRaw.map((b) => ({
         id: b.id,
         bookingRef: b.bookingRef,
+        checkIn: b.checkIn,
         checkOut: b.checkOut,
         guestName: `${b.guest.firstName} ${b.guest.lastName}`,
         roomNumber: b.room.number,
@@ -90,15 +108,31 @@ export const GET = withAuth(
         ),
       }));
 
+      const noShows = noShowsRaw.map((b) => ({
+        id: b.id,
+        bookingRef: b.bookingRef,
+        checkIn: b.checkIn,
+        guestName: `${b.guest.firstName} ${b.guest.lastName}`,
+        guestEmail: b.guest.email,
+        roomNumber: b.room.number,
+        roomType: b.room.roomType.name,
+        daysMissed: Math.floor(
+          (startOfToday.getTime() - new Date(b.checkIn).getTime()) /
+            (1000 * 60 * 60 * 24)
+        ),
+      }));
+
       return successResponse({
         todayArrivals,
         todayDepartures,
         overdueCheckouts,
+        noShows,
         pendingCleaning: cleaningRaw,
         counts: {
           arrivals: todayArrivals.length,
           departures: todayDepartures.length,
           overdue: overdueCheckouts.length,
+          noShows: noShows.length,
           cleaning: cleaningRaw.length,
         },
       });

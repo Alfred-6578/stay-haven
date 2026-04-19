@@ -1,7 +1,8 @@
 'use client'
 import React, { useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
-import { HiOutlineSearch, HiOutlineChevronDown, HiOutlineChevronUp, HiOutlineLogin, HiOutlineLogout } from 'react-icons/hi'
+import { toast } from 'sonner'
+import { HiOutlineSearch, HiOutlineChevronDown, HiOutlineChevronUp, HiOutlineLogin, HiOutlineLogout, HiOutlineExclamation } from 'react-icons/hi'
 import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
 import CheckInModal, { CheckInBooking } from '@/component/staff/CheckInModal'
 import CheckOutModal, { CheckOutBooking } from '@/component/staff/CheckOutModal'
@@ -89,13 +90,26 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-// A booking is ready for check-in if its check-in date is today or past
+// Check-in is only offered on the actual check-in day (not days later)
 function isCheckInReady(booking: DetailBooking): boolean {
   if (booking.status !== 'CONFIRMED') return false
   const checkInDate = new Date(booking.checkIn)
+  checkInDate.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
   const endOfToday = new Date()
   endOfToday.setHours(23, 59, 59, 999)
-  return checkInDate <= endOfToday
+  return checkInDate >= today && checkInDate <= endOfToday
+}
+
+// A CONFIRMED booking whose check-in date has passed (guest never arrived)
+function isNoShow(booking: DetailBooking): boolean {
+  if (booking.status !== 'CONFIRMED') return false
+  const checkInDate = new Date(booking.checkIn)
+  checkInDate.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return checkInDate < today
 }
 
 export default function StaffGuestsPage() {
@@ -307,6 +321,15 @@ export default function StaffGuestsPage() {
                         detail={detail}
                         onCheckIn={(b) => handleCheckIn(detail, b)}
                         onCheckOut={(b) => handleCheckOut(detail, b)}
+                        onNoShow={async (b: DetailBooking) => {
+                          try {
+                            await api.post(`/staff/bookings/${b.id}/no-show`)
+                            toast.success(`${detail.user.firstName} ${detail.user.lastName} marked as no-show`)
+                            reloadDetail(guest.id)
+                          } catch {
+                            toast.error('Failed to mark no-show')
+                          }
+                        }}
                       />
                     )}
                   </div>
@@ -344,10 +367,12 @@ function GuestDetailPanel({
   detail,
   onCheckIn,
   onCheckOut,
+  onNoShow,
 }: {
   detail: GuestDetail
   onCheckIn: (booking: DetailBooking) => void
   onCheckOut: (booking: DetailBooking) => void
+  onNoShow: (booking: DetailBooking) => void
 }) {
   const { guestProfile, bookings, loyalty, user } = detail
   const preferences = guestProfile?.preferences || {}
@@ -405,6 +430,7 @@ function GuestDetailPanel({
             {bookings.map(b => {
               const canCheckIn = isCheckInReady(b)
               const canCheckOut = b.status === 'CHECKED_IN'
+              const canNoShow = isNoShow(b)
               return (
                 <div key={b.id} className="border border-border rounded-lg px-3 py-2.5 bg-foreground-inverse">
                   <div className="flex items-center justify-between gap-2">
@@ -423,7 +449,7 @@ function GuestDetailPanel({
                   </div>
                   <div className="flex items-center justify-between mt-2">
                     <p className="text-foreground-tertiary text-[10px]">{b.bookingRef}</p>
-                    {(canCheckIn || canCheckOut) && (
+                    {(canCheckIn || canCheckOut || canNoShow) && (
                       <div className="flex gap-1">
                         {canCheckIn && (
                           <button
@@ -441,6 +467,15 @@ function GuestDetailPanel({
                           >
                             <HiOutlineLogout size={12} />
                             Check Out
+                          </button>
+                        )}
+                        {canNoShow && (
+                          <button
+                            onClick={() => onNoShow(b)}
+                            className="inline-flex items-center gap-1 bg-danger text-foreground-inverse text-[11px] font-semibold px-2.5 py-1 rounded-md hover:opacity-90"
+                          >
+                            <HiOutlineExclamation size={12} />
+                            No-Show
                           </button>
                         )}
                       </div>
