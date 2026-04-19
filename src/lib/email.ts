@@ -418,7 +418,7 @@ export async function serviceBookingEmail(
       <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.7;">
         You&rsquo;ll receive a confirmation once our team approves the request. If you need to cancel, you can do so from your dashboard up to 24 hours before the scheduled time.
       </p>
-      ${primaryButton(`${CLIENT_URL}/services`, "View My Services")}
+      ${primaryButton(`${CLIENT_URL}/my-services`, "View My Services")}
       <p style="margin: 0; font-size: 13px; color: #9ca3af; line-height: 1.6;">
         Questions? Reply to this email or contact the front desk.
       </p>

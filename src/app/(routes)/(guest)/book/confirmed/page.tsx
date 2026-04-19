@@ -3,6 +3,7 @@ import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import Button from '@/component/ui/Button'
+import { calculatePointsEarned } from '@/lib/loyalty'
 import { HiOutlineCalendar, HiOutlineUsers } from 'react-icons/hi'
 import { MdOutlineKingBed } from 'react-icons/md'
 
@@ -28,19 +29,37 @@ function ConfirmedContent() {
   const bookingId = searchParams.get('bookingId')
   const groupRef = searchParams.get('groupRef')
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [guestTier, setGuestTier] = useState<string>('BRONZE')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     ;(async () => {
       try {
+        const promises: Promise<unknown>[] = []
         if (groupRef) {
-          const res = await api.get(`/guest/bookings?groupRef=${encodeURIComponent(groupRef)}&limit=50`)
-          // Endpoint returns { upcoming, past } — we want all bookings in the group
-          const data = res.data.data
+          promises.push(api.get(`/guest/bookings?groupRef=${encodeURIComponent(groupRef)}&limit=50`))
+        } else if (bookingId) {
+          promises.push(api.get(`/bookings/${bookingId}`))
+        }
+        // Also fetch the guest's current tier so we can compute the
+        // correct earn rate (the tier at checkout time — since this
+        // page renders right after payment, lifetimePoints now include
+        // what was just awarded, so the tier shown matches reality).
+        promises.push(api.get('/guest/loyalty'))
+
+        const results = await Promise.all(promises)
+        const bookingRes = results[0] as { data: { data: unknown } }
+        const loyaltyRes = results[1] as { data: { data: { tier: string } } } | undefined
+
+        if (groupRef) {
+          const data = bookingRes.data.data as { upcoming?: Booking[]; past?: Booking[] }
           setBookings([...(data.upcoming || []), ...(data.past || [])])
         } else if (bookingId) {
-          const res = await api.get(`/bookings/${bookingId}`)
-          setBookings([res.data.data])
+          setBookings([bookingRes.data.data as Booking])
+        }
+
+        if (loyaltyRes) {
+          setGuestTier(loyaltyRes.data.data.tier || 'BRONZE')
         }
       } catch {}
       setLoading(false)
@@ -67,7 +86,7 @@ function ConfirmedContent() {
     (s, b) => s + Math.max(0, Number(b.totalAmount) - Number(b.discountAmount || 0)),
     0
   )
-  const pointsEarned = Math.floor(groupTotal)
+  const pointsEarned = calculatePointsEarned(groupTotal, guestTier)
 
   return (
     <div className="min-h-screen bg-foreground-inverse flex items-center justify-center px-5 py-16">

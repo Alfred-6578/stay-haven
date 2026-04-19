@@ -8,6 +8,8 @@ import Button from '@/component/ui/Button'
 import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
 import PayRoomServiceModal from '@/component/room-service/PayRoomServiceModal'
 import UpgradeOptionsModal from '@/component/booking/UpgradeOptionsModal'
+import PaymentPolling from '@/component/booking/PaymentPolling'
+import { toast } from 'sonner'
 import { HiOutlineCalendar, HiOutlineUsers, HiOutlineArrowLeft, HiOutlineArrowUp, HiOutlineClock, HiOutlineCheck, HiOutlineX as HiOutlineXMark } from 'react-icons/hi'
 import { MdOutlineKingBed } from 'react-icons/md'
 import { BsShieldCheck } from 'react-icons/bs'
@@ -48,7 +50,13 @@ interface BookingDetail {
   } | null
   roomServiceOrders: Array<{ id: string; totalAmount: string | number; status: string; createdAt: string }>
   serviceBookings: Array<{ id: string; amount: string | number; status: string; service: { name: string; category: string } }>
-  upgradeRequest: { id: string; status: string; requestedType: { name: string; basePrice: string | number } } | null
+  upgradeRequest: {
+    id: string
+    status: string
+    paymentReference: string | null
+    priceDifference: string | number
+    requestedType: { name: string; basePrice: string | number }
+  } | null
   stayExtension: { id: string; status: string; newCheckOut: string; additionalNights: number; additionalAmount: string | number } | null
   roomServiceBalance: {
     unsettledTotal: number
@@ -74,6 +82,8 @@ export default function BookingDetailPage() {
   const [cancelling, setCancelling] = useState(false)
   const [payOpen, setPayOpen] = useState(false)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [upgradePaying, setUpgradePaying] = useState(false)
+  const [upgradePayment, setUpgradePayment] = useState<{ reference: string } | null>(null)
 
   const refreshBooking = async () => {
     try {
@@ -89,6 +99,22 @@ export default function BookingDetailPage() {
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  const handleUpgradePay = async () => {
+    if (!booking) return
+    setUpgradePaying(true)
+    try {
+      const res = await api.post(`/bookings/${booking.id}/upgrade/pay-link`)
+      const { authorizationUrl, reference } = res.data.data
+      setUpgradePayment({ reference })
+      window.open(authorizationUrl, '_blank', 'width=600,height=700,scrollbars=yes')
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to start payment'
+      toast.error(msg)
+    } finally {
+      setUpgradePaying(false)
+    }
+  }
 
   const handleCancel = async () => {
     if (!confirm('Are you sure you want to cancel this booking?')) return
@@ -299,25 +325,48 @@ export default function BookingDetailPage() {
               </h3>
               {booking.upgradeRequest ? (
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-foreground-secondary text-sm">
-                      {booking.upgradeRequest.requestedType.name}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                      booking.upgradeRequest.status === 'PENDING'
+                  {(() => {
+                    const ur = booking.upgradeRequest
+                    const awaitingPayment = ur.status === 'PENDING' && !!ur.paymentReference
+                    const statusLabel = awaitingPayment ? 'AWAITING PAYMENT' : ur.status
+                    const statusStyle = awaitingPayment
+                      ? 'bg-[#E0F2FE] text-[#0369A1]'
+                      : ur.status === 'PENDING'
                         ? 'bg-warning-bg text-warning'
-                        : booking.upgradeRequest.status === 'APPROVED'
+                        : ur.status === 'APPROVED'
                           ? 'bg-success-bg text-success'
                           : 'bg-danger-bg text-danger'
-                    }`}>
-                      {booking.upgradeRequest.status}
-                    </span>
-                  </div>
-                  {booking.upgradeRequest.status === 'PENDING' && (
+                    return (
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-foreground-secondary text-sm">
+                          {ur.requestedType.name}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${statusStyle}`}>
+                          {statusLabel}
+                        </span>
+                      </div>
+                    )
+                  })()}
+                  {booking.upgradeRequest.status === 'PENDING' && !booking.upgradeRequest.paymentReference && (
                     <p className="text-foreground-tertiary text-xs flex items-center gap-1">
                       <HiOutlineClock size={12} />
                       Your upgrade request is under review.
                     </p>
+                  )}
+                  {booking.upgradeRequest.status === 'PENDING' && booking.upgradeRequest.paymentReference && (
+                    <>
+                      <p className="text-foreground text-xs mb-3">
+                        Your upgrade is approved! Pay <strong>₦{Number(booking.upgradeRequest.priceDifference).toLocaleString()}</strong> to confirm your new room.
+                      </p>
+                      <button
+                        onClick={handleUpgradePay}
+                        disabled={upgradePaying}
+                        className="w-full bg-foreground text-foreground-inverse rounded-lg py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {upgradePaying && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                        {upgradePaying ? 'Opening Paystack…' : `Pay ₦${Number(booking.upgradeRequest.priceDifference).toLocaleString()}`}
+                      </button>
+                    </>
                   )}
                   {booking.upgradeRequest.status === 'APPROVED' && (
                     <p className="text-success text-xs flex items-center gap-1">
@@ -406,6 +455,25 @@ export default function BookingDetailPage() {
           onClose={() => setUpgradeOpen(false)}
           onSuccess={refreshBooking}
         />
+      )}
+
+      {upgradePayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-foreground/40" />
+          <div className="relative w-full max-w-md bg-foreground-inverse rounded-2xl shadow-xl p-6">
+            <PaymentPolling
+              reference={upgradePayment.reference}
+              bookingId={booking.id}
+              statusPath={`/payments/upgrade/status/${upgradePayment.reference}`}
+              onSuccess={() => {
+                setUpgradePayment(null)
+                refreshBooking()
+                toast.success('Upgrade confirmed — your new room is ready!')
+              }}
+              onRetry={() => setUpgradePayment(null)}
+            />
+          </div>
+        </div>
       )}
     </div>
   )

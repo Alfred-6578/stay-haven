@@ -4,8 +4,6 @@ import { withAuth, RouteContext, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
 import { createNotification } from "@/lib/notifications";
 
-const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
-
 /**
  * Finds an available room of the requested type for the booking dates,
  * excluding the current booking from conflict checks (since it will be moved).
@@ -172,64 +170,58 @@ export const PATCH = withAuth<{ id: string }>(
         );
       }
 
-      // ── Paid upgrade — initialize Paystack ──
+      // ── Paid upgrade — mark as "awaiting payment" and notify the guest ──
+      // We don't call Paystack here; we defer that to when the guest clicks
+      // "Pay Now" on their booking page. That way the authorization URL
+      // belongs to the guest's session and won't expire before they see it.
       const reference = `UPG-${upgrade.booking.bookingRef}-${Date.now()}`;
 
-      await prisma.pendingPayment.create({
-        data: {
-          reference,
-          userId: upgrade.booking.guestId,
-          type: "UPGRADE",
+      await prisma.$transaction(async (tx) => {
+        await tx.pendingPayment.create({
           data: {
-            upgradeRequestId: id,
-            bookingId: upgrade.booking.id,
-            oldRoomId: upgrade.booking.roomId,
-            newRoomId: newRoom.id,
-            newRoomNumber: newRoom.number,
-            newRoomStatus: newRoom.status,
-            requestedTypeName: upgrade.requestedType.name,
-            bookingStatus: upgrade.booking.status,
+            reference,
+            userId: upgrade.booking.guestId,
+            type: "UPGRADE",
+            data: {
+              upgradeRequestId: id,
+              bookingId: upgrade.booking.id,
+              oldRoomId: upgrade.booking.roomId,
+              newRoomId: newRoom.id,
+              newRoomNumber: newRoom.number,
+              newRoomStatus: newRoom.status,
+              requestedTypeName: upgrade.requestedType.name,
+              bookingStatus: upgrade.booking.status,
+            },
+            amount: priceDiff,
+            status: "pending",
+            // 7-day window for the guest to pay before the approval expires
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           },
-          amount: priceDiff,
-          status: "pending",
-          expiresAt: new Date(Date.now() + 30 * 60 * 1000),
-        },
+        });
+
+        // Mark the upgrade as processed + record reference, but keep PENDING
+        // status since final approval depends on payment.
+        await tx.roomUpgradeRequest.update({
+          where: { id },
+          data: {
+            processedById: user.id,
+            processedAt: new Date(),
+            paymentReference: reference,
+          },
+        });
       });
 
-      const paystackRes = await fetch(
-        "https://api.paystack.co/transaction/initialize",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${PAYSTACK_SECRET}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: upgrade.booking.guest.email,
-            amount: Math.round(priceDiff * 100), // kobo
-            reference,
-            callback_url: `${process.env.CLIENT_URL}/bookings/${upgrade.booking.id}`,
-            metadata: {
-              type: "UPGRADE",
-              upgradeRequestId: id,
-              bookingRef: upgrade.booking.bookingRef,
-            },
-          }),
-        }
-      );
-
-      const paystackData = await paystackRes.json();
-      if (!paystackData.status) {
-        return errorResponse(
-          paystackData.message || "Failed to initialize payment",
-          500
-        );
-      }
+      await createNotification({
+        userId: upgrade.booking.guestId,
+        title: "Upgrade Approved — Payment Required",
+        message: `Your upgrade to ${upgrade.requestedType.name} is approved. Pay ₦${priceDiff.toLocaleString()} to confirm your new room.`,
+        type: "UPGRADE_APPROVED",
+        bookingId: upgrade.booking.id,
+      });
 
       return successResponse({
         requiresPayment: true,
-        authorizationUrl: paystackData.data.authorization_url,
-        reference: paystackData.data.reference,
+        reference,
         amount: priceDiff,
         newRoom: newRoom.number,
       });

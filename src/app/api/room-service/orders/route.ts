@@ -4,7 +4,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withAuth, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, notifyRoles } from "@/lib/notifications";
 
 const ORDER_STATUSES = [
   "PENDING",
@@ -136,6 +136,15 @@ export const POST = withAuth(
         type: "ROOM_SERVICE_UPDATE",
         bookingId: booking.id,
       });
+
+      // Notify staff of the new order so they can start preparing it
+      const totalItems = lines.reduce((s, l) => s + l.quantity, 0);
+      notifyRoles(["STAFF", "MANAGER", "ADMIN"], {
+        title: "New Room Service Order",
+        message: `Room ${booking.room.number} ordered ${totalItems} item${totalItems !== 1 ? "s" : ""} (ETA ${etaFormatted}).`,
+        type: "ROOM_SERVICE_UPDATE",
+        bookingId: booking.id,
+      }).catch((e) => console.error("notifyRoles (order) failed:", e));
 
       return successResponse(
         {

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, RouteContext, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, notifyRoles } from "@/lib/notifications";
 
 /**
  * POST /api/bookings/[id]/upgrade/request
@@ -158,6 +158,14 @@ export const POST = withAuth<{ id: string }>(
         type: "GENERAL",
         bookingId: id,
       });
+
+      // Notify admins of the pending upgrade
+      notifyRoles(["ADMIN", "MANAGER"], {
+        title: "Upgrade Request Pending",
+        message: `New upgrade request to ${upgrade.requestedType.name} (${booking.bookingRef}) needs review.`,
+        type: "GENERAL",
+        bookingId: id,
+      }).catch((e) => console.error("notifyRoles (upgrade) failed:", e));
 
       return successResponse(upgrade, "Upgrade request submitted", 201);
     } catch (error) {

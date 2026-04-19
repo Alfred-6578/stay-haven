@@ -156,7 +156,7 @@ export default function GuestDashboard() {
         {[
           { href: '/rooms', icon: MdOutlineKingBed, label: 'Book a Room', desc: 'Browse available rooms' },
           { href: '/room-service', icon: MdOutlineRoomService, label: 'Room Service', desc: 'Order food & drinks' },
-          { href: '/services', icon: MdOutlineMiscellaneousServices, label: 'Request Service', desc: 'Spa, transport & more' },
+          { href: '/my-services', icon: MdOutlineMiscellaneousServices, label: 'Request Service', desc: 'Spa, transport & more' },
         ].map(action => (
           <Link
             key={action.href}

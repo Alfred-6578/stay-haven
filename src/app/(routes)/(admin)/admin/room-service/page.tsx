@@ -12,6 +12,7 @@ import {
   HiOutlineSearch,
   HiOutlineClock,
 } from 'react-icons/hi'
+import ImageUploadField from '@/component/admin/ImageUploadField'
 
 // ── Types ──
 
@@ -538,10 +539,13 @@ export default function AdminRoomServicePage() {
                 <label className="text-foreground-tertiary text-[11px] uppercase tracking-wider font-semibold">Prep Time (minutes)</label>
                 <input type="number" min="1" max="240" value={form.prepMinutes} onChange={e => setForm(p => ({ ...p, prepMinutes: e.target.value }))} className={`mt-1.5 ${fieldClass}`} />
               </div>
-              <div>
-                <label className="text-foreground-tertiary text-[11px] uppercase tracking-wider font-semibold">Image URL <span className="normal-case text-foreground-tertiary">(optional)</span></label>
-                <input value={form.image} onChange={e => setForm(p => ({ ...p, image: e.target.value }))} className={`mt-1.5 ${fieldClass}`} placeholder="https://…" />
-              </div>
+              <ImageUploadField
+                value={form.image}
+                onChange={url => setForm(p => ({ ...p, image: url }))}
+                folder="room-service"
+                label="Image"
+                disabled={saving}
+              />
             </div>
             <div className="flex gap-2 px-5 py-4 border-t border-border">
               <button onClick={() => setFormOpen(false)} disabled={saving} className="flex-1 border border-border rounded-lg py-2.5 text-sm text-foreground hover:bg-foreground-disabled/5">

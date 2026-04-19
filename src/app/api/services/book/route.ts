@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, notifyRoles } from "@/lib/notifications";
 import { serviceBookingEmail } from "@/lib/email";
 
 export const POST = withAuth(
@@ -120,6 +120,14 @@ export const POST = withAuth(
         type: "GENERAL",
         bookingId,
       });
+
+      // Notify staff of the pending service request
+      notifyRoles(["STAFF", "MANAGER", "ADMIN"], {
+        title: "Service Request Pending",
+        message: `New ${service.name} request for ${dateStr} at ${timeStr} needs approval (${booking.bookingRef}).`,
+        type: "GENERAL",
+        bookingId,
+      }).catch((e) => console.error("notifyRoles (service) failed:", e));
 
       // Fire-and-forget email
       const guest = await prisma.user.findUnique({

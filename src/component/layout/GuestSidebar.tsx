@@ -24,7 +24,7 @@ const navItems = [
   { href: '/bookings', label: 'My Bookings', icon: HiOutlineCalendar },
   { href: '/loyalty', label: 'Loyalty', icon: HiOutlineStar },
   { href: '/room-service', label: 'Room Service', icon: MdOutlineRoomService },
-  { href: '/services', label: 'Services', icon: MdOutlineMiscellaneousServices },
+  { href: '/my-services', label: 'Services', icon: MdOutlineMiscellaneousServices },
   { href: '/profile', label: 'Profile', icon: HiOutlineUser },
   { href: '/notifications', label: 'Notifications', icon: HiOutlineBell },
 ]

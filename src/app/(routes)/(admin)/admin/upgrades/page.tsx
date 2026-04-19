@@ -85,7 +85,7 @@ export default function AdminUpgradesPage() {
       const res = await api.patch(`/admin/upgrades/${id}/approve`)
       const data = res.data.data
       if (data.requiresPayment) {
-        toast.success(`Payment link sent — guest will pay ${formatNaira(data.amount)} via Paystack`)
+        toast.success(`Guest notified — they'll pay ${formatNaira(data.amount)} to confirm the upgrade`)
       } else {
         toast.success(`Upgrade applied — guest moved to Room ${data.newRoom}`)
       }
@@ -199,9 +199,18 @@ export default function AdminUpgradesPage() {
                       )}
                     </td>
                     <td className="py-3 px-2">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${STATUS_COLORS[u.status]}`}>
-                        {u.status}
-                      </span>
+                      {(() => {
+                        const awaitingPayment = u.status === 'PENDING' && !!u.paymentReference
+                        const badgeClass = awaitingPayment
+                          ? 'bg-[#E0F2FE] text-[#0369A1]'
+                          : STATUS_COLORS[u.status]
+                        const label = awaitingPayment ? 'Awaiting Payment' : u.status
+                        return (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
+                            {label}
+                          </span>
+                        )
+                      })()}
                     </td>
                     <td className="py-3 px-2 text-foreground-tertiary text-xs max-md:hidden">
                       {new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -212,7 +221,7 @@ export default function AdminUpgradesPage() {
                       )}
                     </td>
                     <td className="py-3 px-2 text-right">
-                      {u.status === 'PENDING' && (
+                      {u.status === 'PENDING' && !u.paymentReference && (
                         <div className="flex items-center gap-1 justify-end">
                           <button
                             onClick={() => setConfirmAction({ id: u.id, type: 'approve', upgrade: u })}
@@ -229,6 +238,9 @@ export default function AdminUpgradesPage() {
                             Reject
                           </button>
                         </div>
+                      )}
+                      {u.status === 'PENDING' && u.paymentReference && (
+                        <span className="text-foreground-tertiary text-[11px]">Guest to pay</span>
                       )}
                       {u.status !== 'PENDING' && (
                         <span className="text-foreground-tertiary text-xs">—</span>
