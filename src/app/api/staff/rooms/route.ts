@@ -11,29 +11,51 @@ export const GET = withAuth(
         include: {
           roomType: { select: { name: true, basePrice: true } },
           bookings: {
-            where: { status: "CHECKED_IN" },
+            where: {
+              // Include CHECKED_IN + CONFIRMED (could be no-show or pending check-in)
+              status: { in: ["CHECKED_IN", "CONFIRMED"] },
+            },
             select: {
               id: true,
               bookingRef: true,
+              status: true,
               checkIn: true,
               checkOut: true,
               guest: { select: { firstName: true, lastName: true } },
             },
+            orderBy: { checkIn: "desc" },
             take: 1,
           },
         },
         orderBy: [{ floor: "asc" }, { number: "asc" }],
       });
 
-      const shaped = rooms.map((r) => ({
-        id: r.id,
-        number: r.number,
-        floor: r.floor,
-        status: r.status,
-        notes: r.notes,
-        roomType: r.roomType,
-        currentBooking: r.status === "OCCUPIED" ? r.bookings[0] || null : null,
-      }));
+      const now = new Date();
+      const startOfToday = new Date(now);
+      startOfToday.setHours(0, 0, 0, 0);
+
+      const shaped = rooms.map((r) => {
+        const booking = r.bookings[0] || null;
+
+        // Determine if this is a no-show situation:
+        // Room has a CONFIRMED booking whose check-in date has passed
+        const isNoShow =
+          booking &&
+          booking.status === "CONFIRMED" &&
+          new Date(booking.checkIn) < startOfToday;
+
+        return {
+          id: r.id,
+          number: r.number,
+          floor: r.floor,
+          status: r.status,
+          notes: r.notes,
+          roomType: r.roomType,
+          currentBooking: booking,
+          bookingStatus: booking?.status || null,
+          isNoShow: !!isNoShow,
+        };
+      });
 
       const floorMap = new Map<number, typeof shaped>();
       for (const room of shaped) {

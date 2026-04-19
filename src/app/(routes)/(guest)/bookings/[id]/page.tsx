@@ -7,7 +7,8 @@ import { api } from '@/lib/api'
 import Button from '@/component/ui/Button'
 import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
 import PayRoomServiceModal from '@/component/room-service/PayRoomServiceModal'
-import { HiOutlineCalendar, HiOutlineUsers, HiOutlineArrowLeft } from 'react-icons/hi'
+import UpgradeOptionsModal from '@/component/booking/UpgradeOptionsModal'
+import { HiOutlineCalendar, HiOutlineUsers, HiOutlineArrowLeft, HiOutlineArrowUp, HiOutlineClock, HiOutlineCheck, HiOutlineX as HiOutlineXMark } from 'react-icons/hi'
 import { MdOutlineKingBed } from 'react-icons/md'
 import { BsShieldCheck } from 'react-icons/bs'
 
@@ -72,6 +73,7 @@ export default function BookingDetailPage() {
   const [loading, setLoading] = useState(true)
   const [cancelling, setCancelling] = useState(false)
   const [payOpen, setPayOpen] = useState(false)
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   const refreshBooking = async () => {
     try {
@@ -288,6 +290,72 @@ export default function BookingDetailPage() {
             </div>
           )}
 
+          {/* Upgrade Section */}
+          {['CONFIRMED', 'CHECKED_IN'].includes(booking.status) && (
+            <div className="border border-border rounded-xl p-5">
+              <h3 className="text-foreground font-semibold text-sm mb-3 flex items-center gap-2">
+                <HiOutlineArrowUp size={16} />
+                Room Upgrade
+              </h3>
+              {booking.upgradeRequest ? (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-foreground-secondary text-sm">
+                      {booking.upgradeRequest.requestedType.name}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                      booking.upgradeRequest.status === 'PENDING'
+                        ? 'bg-warning-bg text-warning'
+                        : booking.upgradeRequest.status === 'APPROVED'
+                          ? 'bg-success-bg text-success'
+                          : 'bg-danger-bg text-danger'
+                    }`}>
+                      {booking.upgradeRequest.status}
+                    </span>
+                  </div>
+                  {booking.upgradeRequest.status === 'PENDING' && (
+                    <p className="text-foreground-tertiary text-xs flex items-center gap-1">
+                      <HiOutlineClock size={12} />
+                      Your upgrade request is under review.
+                    </p>
+                  )}
+                  {booking.upgradeRequest.status === 'APPROVED' && (
+                    <p className="text-success text-xs flex items-center gap-1">
+                      <HiOutlineCheck size={12} />
+                      Upgrade confirmed! Check your new room assignment.
+                    </p>
+                  )}
+                  {booking.upgradeRequest.status === 'REJECTED' && (
+                    <>
+                      <p className="text-foreground-tertiary text-xs mb-2 flex items-center gap-1">
+                        <HiOutlineXMark size={12} />
+                        This upgrade wasn&apos;t available. You can try again.
+                      </p>
+                      <button
+                        onClick={() => setUpgradeOpen(true)}
+                        className="w-full border border-border rounded-lg py-2 text-sm text-foreground font-medium hover:bg-foreground-disabled/5"
+                      >
+                        Request New Upgrade
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <p className="text-foreground-tertiary text-xs mb-3">
+                    Want a better room? Check available upgrades for your stay dates.
+                  </p>
+                  <button
+                    onClick={() => setUpgradeOpen(true)}
+                    className="w-full bg-foreground text-foreground-inverse rounded-lg py-2.5 text-sm font-semibold hover:opacity-90"
+                  >
+                    Request Room Upgrade
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex flex-col gap-2">
             {canCancel && (
@@ -327,6 +395,16 @@ export default function BookingDetailPage() {
             setPayOpen(false)
             refreshBooking()
           }}
+        />
+      )}
+
+      {upgradeOpen && (
+        <UpgradeOptionsModal
+          bookingId={booking.id}
+          currentRoomType={booking.room.roomType.name}
+          currentAmenities={booking.room.roomType.amenities}
+          onClose={() => setUpgradeOpen(false)}
+          onSuccess={refreshBooking}
         />
       )}
     </div>

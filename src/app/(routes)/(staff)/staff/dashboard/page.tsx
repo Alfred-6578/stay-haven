@@ -1,6 +1,7 @@
 'use client'
 import React, { useEffect, useState, useCallback } from 'react'
 import { api } from '@/lib/api'
+import { toast } from 'sonner'
 import {
   HiOutlineArrowCircleRight,
   HiOutlineArrowCircleLeft,
@@ -12,6 +13,7 @@ import RoomStatusBoard, { StaffRoom } from '@/component/staff/RoomStatusBoard'
 import CheckInModal, { CheckInBooking } from '@/component/staff/CheckInModal'
 import CheckOutModal, { CheckOutBooking } from '@/component/staff/CheckOutModal'
 import WalkInBookingModal from '@/component/staff/walkin/WalkInBookingModal'
+import OverstayModal from '@/component/staff/OverstayModal'
 
 interface DashboardData {
   todayArrivals: Array<{
@@ -33,15 +35,28 @@ interface DashboardData {
   overdueCheckouts: Array<{
     id: string
     bookingRef: string
+    checkIn: string
+    checkOut: string
     guestName: string
     roomNumber: string
     hoursOverdue: number
+  }>
+  noShows: Array<{
+    id: string
+    bookingRef: string
+    checkIn: string
+    guestName: string
+    guestEmail: string
+    roomNumber: string
+    roomType: string
+    daysMissed: number
   }>
   pendingCleaning: Array<{ id: string; number: string; floor: number }>
   counts: {
     arrivals: number
     departures: number
     overdue: number
+    noShows: number
     cleaning: number
   }
 }
@@ -82,6 +97,11 @@ export default function StaffDashboard() {
   const [checkInBooking, setCheckInBooking] = useState<CheckInBooking | null>(null)
   const [checkOutBooking, setCheckOutBooking] = useState<CheckOutBooking | null>(null)
   const [walkInOpen, setWalkInOpen] = useState(false)
+  const [markingNoShow, setMarkingNoShow] = useState<string | null>(null)
+  const [overstayBooking, setOverstayBooking] = useState<{
+    id: string; bookingRef: string; checkIn: string; checkOut: string;
+    guestName: string; roomNumber: string; hoursOverdue: number
+  } | null>(null)
 
   const fetchAll = useCallback(async () => {
     try {
@@ -149,12 +169,130 @@ export default function StaffDashboard() {
       </div>
 
       {/* Stat bar */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
         <StatCard label="Arrivals Today" value={data.counts.arrivals} bg="bg-[#EAF3DE]" icon={HiOutlineArrowCircleRight} />
         <StatCard label="Departures Today" value={data.counts.departures} bg="bg-[#F0ECE4]" icon={HiOutlineArrowCircleLeft} />
         <StatCard label="Overdue" value={data.counts.overdue} bg="bg-[#FAECE7]" icon={HiOutlineExclamation} />
+        <StatCard label="No-Shows" value={data.counts.noShows} bg="bg-[#FEE2E2]" icon={HiOutlineExclamation} />
         <StatCard label="Needs Cleaning" value={data.counts.cleaning} bg="bg-[#FAEEDA]" icon={HiOutlineSparkles} />
       </div>
+
+      {/* Overdue Checkouts — prominent alert */}
+      {data.overdueCheckouts.length > 0 && (
+        <section className="bg-danger-bg/40 border border-danger/30 rounded-2xl p-5 vsm:p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <HiOutlineExclamation size={20} className="text-danger" />
+            <h2 className="text-danger font-semibold text-base">
+              Overdue Checkouts ({data.overdueCheckouts.length})
+            </h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-danger/70 text-[11px] uppercase tracking-wider border-b border-danger/20">
+                  <th className="py-2 px-2 font-semibold">Guest</th>
+                  <th className="py-2 px-2 font-semibold">Room</th>
+                  <th className="py-2 px-2 font-semibold">Overdue</th>
+                  <th className="py-2 px-2 font-semibold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.overdueCheckouts.map(b => (
+                  <tr key={b.id} className="border-b border-danger/10 last:border-0">
+                    <td className="py-3 px-2">
+                      <p className="text-foreground font-medium">{b.guestName}</p>
+                      <p className="text-foreground-tertiary text-xs">{b.bookingRef}</p>
+                    </td>
+                    <td className="py-3 px-2 text-foreground">{b.roomNumber}</td>
+                    <td className="py-3 px-2">
+                      <span className="inline-flex items-center gap-1 bg-danger text-foreground-inverse text-[11px] font-bold px-2 py-0.5 rounded-full">
+                        {b.hoursOverdue}h overdue
+                      </span>
+                    </td>
+                    <td className="py-3 px-2 text-right">
+                      <button
+                        onClick={() => setOverstayBooking(b)}
+                        className="bg-warning text-foreground-inverse text-xs font-medium px-3 py-1.5 rounded-lg hover:opacity-90"
+                      >
+                        Resolve
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* No-Shows — CONFIRMED bookings where check-in date has passed */}
+      {data.noShows.length > 0 && (
+        <section className="bg-[#FEE2E2]/40 border border-[#F87171]/30 rounded-2xl p-5 vsm:p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <HiOutlineExclamation size={20} className="text-[#DC2626]" />
+            <h2 className="text-[#DC2626] font-semibold text-base">
+              No-Shows ({data.noShows.length})
+            </h2>
+            <span className="text-foreground-tertiary text-xs ml-auto">
+              Guests who didn&apos;t check in — mark as no-show to free the room
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[#DC2626]/70 text-[11px] uppercase tracking-wider border-b border-[#F87171]/20">
+                  <th className="py-2 px-2 font-semibold">Guest</th>
+                  <th className="py-2 px-2 font-semibold">Room</th>
+                  <th className="py-2 px-2 font-semibold">Was Expected</th>
+                  <th className="py-2 px-2 font-semibold">Missed</th>
+                  <th className="py-2 px-2 font-semibold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.noShows.map(b => (
+                  <tr key={b.id} className="border-b border-[#F87171]/10 last:border-0">
+                    <td className="py-3 px-2">
+                      <p className="text-foreground font-medium">{b.guestName}</p>
+                      <p className="text-foreground-tertiary text-xs">{b.bookingRef}</p>
+                    </td>
+                    <td className="py-3 px-2">
+                      <p className="text-foreground">{b.roomNumber}</p>
+                      <p className="text-foreground-tertiary text-xs">{b.roomType}</p>
+                    </td>
+                    <td className="py-3 px-2 text-foreground-secondary text-xs">
+                      {new Date(b.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </td>
+                    <td className="py-3 px-2">
+                      <span className="inline-flex items-center gap-1 bg-[#DC2626] text-foreground-inverse text-[11px] font-bold px-2 py-0.5 rounded-full">
+                        {b.daysMissed}d ago
+                      </span>
+                    </td>
+                    <td className="py-3 px-2 text-right">
+                      <button
+                        onClick={async () => {
+                          setMarkingNoShow(b.id)
+                          try {
+                            await api.post(`/staff/bookings/${b.id}/no-show`)
+                            toast.success(`${b.guestName} marked as no-show — Room ${b.roomNumber} freed`)
+                            fetchAll()
+                          } catch {
+                            toast.error('Failed to mark no-show')
+                          }
+                          setMarkingNoShow(null)
+                        }}
+                        disabled={markingNoShow === b.id}
+                        className="bg-[#DC2626] text-foreground-inverse text-xs font-medium px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50"
+                      >
+                        {markingNoShow === b.id ? 'Marking…' : 'Mark No-Show'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Today Arrivals */}
       <section className="bg-foreground-inverse border border-border rounded-2xl p-5 vsm:p-6 mb-6">
@@ -276,6 +414,23 @@ export default function StaffDashboard() {
         open={walkInOpen}
         onClose={() => setWalkInOpen(false)}
         onSuccess={fetchAll}
+      />
+
+      <OverstayModal
+        room={overstayBooking ? { id: '', number: overstayBooking.roomNumber, floor: 0, roomType: { name: '' } } : null}
+        booking={overstayBooking ? {
+          id: overstayBooking.id,
+          bookingRef: overstayBooking.bookingRef,
+          checkIn: overstayBooking.checkIn,
+          checkOut: overstayBooking.checkOut,
+          guest: {
+            firstName: overstayBooking.guestName.split(' ')[0],
+            lastName: overstayBooking.guestName.split(' ').slice(1).join(' '),
+          },
+          hoursOverdue: overstayBooking.hoursOverdue,
+        } : null}
+        onClose={() => setOverstayBooking(null)}
+        onSuccess={() => { setOverstayBooking(null); fetchAll() }}
       />
     </div>
   )
