@@ -45,3 +45,38 @@ export async function createNotification(input: CreateNotificationInput) {
     },
   });
 }
+
+/**
+ * Fan out a notification to every active user with one of the given roles.
+ * Useful for telling all staff about a new booking, all admins about a
+ * pending upgrade request, etc.
+ *
+ * Fire-and-forget friendly — caller can .catch() to swallow errors without
+ * blocking the main request.
+ */
+export async function notifyRoles(
+  roles: Array<"STAFF" | "MANAGER" | "ADMIN">,
+  input: Omit<CreateNotificationInput, "userId">
+) {
+  const recipients = await prisma.user.findMany({
+    where: { role: { in: roles }, isActive: true, isDeleted: false },
+    select: { id: true },
+  });
+  if (recipients.length === 0) return { count: 0 };
+
+  await prisma.notification.createMany({
+    data: recipients.map((r) => ({
+      userId: r.id,
+      title: input.title,
+      message: input.message,
+      type: input.type,
+      isRead: false,
+      ...(input.bookingId ? { bookingId: input.bookingId } : {}),
+      ...(input.metadata !== undefined
+        ? { metadata: input.metadata }
+        : {}),
+    })),
+  });
+
+  return { count: recipients.length };
+}

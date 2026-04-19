@@ -3,6 +3,7 @@ import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Toaster } from 'sonner'
 import StaffSidebar from '@/component/layout/StaffSidebar'
+import NotificationBell from '@/component/guest/NotificationBell'
 import { useAuth } from '@/context/AuthContext'
 
 const STAFF_ROLES = ['STAFF', 'MANAGER', 'ADMIN']
@@ -37,6 +38,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
               <p className="text-foreground font-semibold text-sm">{user.firstName} {user.lastName}</p>
             </div>
             <div className="flex items-center gap-3">
+              <NotificationBell />
               <div className="w-8 h-8 rounded-full bg-foreground-disabled/15 flex items-center justify-center text-foreground font-semibold text-xs">
                 {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
               </div>

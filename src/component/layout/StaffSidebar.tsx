@@ -11,6 +11,7 @@ import {
   HiOutlineHome,
   HiOutlineUserGroup,
   HiOutlineClipboardList,
+  HiOutlineBell,
   HiOutlineLogout,
   HiOutlineMenu,
   HiOutlineX,
@@ -21,6 +22,7 @@ const navItems = [
   { href: '/staff/room-board', label: 'Room Board', icon: HiOutlineViewGrid },
   { href: '/staff/guests', label: 'Guest Lookup', icon: HiOutlineUserGroup },
   { href: '/staff/orders', label: 'Order Queue', icon: HiOutlineClipboardList },
+  { href: '/staff/notifications', label: 'Notifications', icon: HiOutlineBell },
 ]
 
 const StaffSidebar = () => {

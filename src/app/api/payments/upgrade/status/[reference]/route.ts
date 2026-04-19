@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, RouteContext, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, notifyRoles } from "@/lib/notifications";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
@@ -108,6 +108,26 @@ export const GET = withAuth<{ reference: string }>(
         type: "UPGRADE_APPROVED",
         bookingId: data.bookingId,
       });
+
+      // Notify staff + admin that the upgrade payment went through, so they
+      // can prep the new room and follow up with housekeeping on the old one.
+      const booking = await prisma.booking.findUnique({
+        where: { id: data.bookingId },
+        select: {
+          bookingRef: true,
+          guest: { select: { firstName: true, lastName: true } },
+        },
+      });
+      const guestName = booking
+        ? `${booking.guest.firstName} ${booking.guest.lastName}`
+        : "Guest";
+      const bookingRef = booking?.bookingRef || "";
+      notifyRoles(["STAFF", "MANAGER", "ADMIN"], {
+        title: "Upgrade Paid",
+        message: `${guestName} paid ₦${Number(pending.amount).toLocaleString()} for upgrade to ${data.requestedTypeName} — now in Room ${data.newRoomNumber} (${bookingRef}).`,
+        type: "UPGRADE_APPROVED",
+        bookingId: data.bookingId,
+      }).catch((e) => console.error("notifyRoles (upgrade paid) failed:", e));
 
       return successResponse({ status: "COMPLETED" });
     } catch (error) {

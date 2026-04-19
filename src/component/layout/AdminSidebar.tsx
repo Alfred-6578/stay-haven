@@ -12,6 +12,7 @@ import {
   HiOutlineUserGroup,
   HiOutlineStar,
   HiOutlineClock,
+  HiOutlineBell,
   HiOutlineMenu,
   HiOutlineX,
 } from 'react-icons/hi'
@@ -30,6 +31,7 @@ const navItems = [
   { href: '/admin/extensions', label: 'Extensions', icon: TbCalendarPlus },
   { href: '/admin/loyalty', label: 'Loyalty', icon: HiOutlineStar },
   { href: '/admin/overstay', label: 'Overstay', icon: HiOutlineClock },
+  { href: '/admin/notifications', label: 'Notifications', icon: HiOutlineBell },
 ]
 
 const AdminSidebar = () => {

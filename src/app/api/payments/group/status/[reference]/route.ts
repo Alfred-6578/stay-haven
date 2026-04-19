@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth, RouteContext, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
 import { calculateTier, calculatePointsEarned } from "@/lib/loyalty";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, notifyRoles } from "@/lib/notifications";
 import { bookingConfirmationEmail } from "@/lib/email";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
@@ -204,6 +204,23 @@ export const GET = withAuth<{ reference: string }>(
         type: "BOOKING_CONFIRMED",
         bookingId: firstBookingId,
       });
+
+      // Notify staff of new confirmed booking
+      const guestName = bookings[0]?.guest
+        ? bookings[0].guest.firstName
+        : "A guest";
+      const arrivalDate = new Date(bookings[0].checkIn).toLocaleDateString(
+        "en-US",
+        { month: "short", day: "numeric" }
+      );
+      notifyRoles(["STAFF", "MANAGER", "ADMIN"], {
+        title: "New Booking",
+        message: isGroup
+          ? `${guestName} booked ${bookings.length} rooms arriving ${arrivalDate} (${data.groupRef}).`
+          : `${guestName} booked ${bookings[0].bookingRef} arriving ${arrivalDate}.`,
+        type: "BOOKING_CONFIRMED",
+        bookingId: firstBookingId,
+      }).catch((e) => console.error("notifyRoles (booking) failed:", e));
 
       if (bookings[0]?.guest) {
         bookingConfirmationEmail(
