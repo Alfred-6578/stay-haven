@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   ResponsiveContainer,
   LineChart,
@@ -10,6 +10,8 @@ import {
   Tooltip,
 } from 'recharts'
 import { api } from '@/lib/api'
+import ErrorState from '@/component/ui/ErrorState'
+import { SkeletonBar } from '@/component/ui/PageSkeleton'
 
 type Period = '7d' | '30d' | '90d' | '12m'
 const PERIODS: Period[] = ['7d', '30d', '90d', '12m']
@@ -48,23 +50,23 @@ const RevenueChart = () => {
   const [period, setPeriod] = useState<Period>('30d')
   const [data, setData] = useState<Point[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
+  const load = useCallback(async () => {
     setLoading(true)
-    api
-      .get(`/admin/stats/revenue?period=${period}`)
-      .then(res => {
-        if (!cancelled) setData(res.data.data.data)
-      })
-      .catch(() => {
-        if (!cancelled) setData([])
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => { cancelled = true }
+    setError(false)
+    try {
+      const res = await api.get(`/admin/stats/revenue?period=${period}`)
+      setData(res.data.data.data)
+    } catch {
+      setError(true)
+      setData([])
+    } finally {
+      setLoading(false)
+    }
   }, [period])
+
+  useEffect(() => { load() }, [load])
 
   return (
     <div className="bg-foreground-inverse border border-border rounded-2xl p-5 vsm:p-6 h-full flex flex-col">
@@ -78,7 +80,8 @@ const RevenueChart = () => {
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md transition-colors ${
+              disabled={loading}
+              className={`text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                 period === p
                   ? 'bg-[#0B1B3A] text-white'
                   : 'text-foreground-secondary hover:text-foreground'
@@ -92,7 +95,14 @@ const RevenueChart = () => {
 
       <div className="flex-1 min-h-[260px]">
         {loading ? (
-          <div className="h-full bg-foreground-disabled/10 rounded-lg animate-pulse" />
+          <SkeletonBar className="h-full rounded-lg" />
+        ) : error ? (
+          <ErrorState
+            title="Couldn't load revenue"
+            description="Try again to fetch revenue data."
+            onRetry={load}
+            compact
+          />
         ) : data.length === 0 ? (
           <div className="h-full flex items-center justify-center text-foreground-tertiary text-sm">
             No revenue data for this period

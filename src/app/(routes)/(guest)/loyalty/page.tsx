@@ -4,6 +4,9 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
 import LoyaltyProgressRing from '@/component/guest/LoyaltyProgressRing'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { SkeletonBar, TableRowSkeleton } from '@/component/ui/PageSkeleton'
 import {
   HiOutlineStar,
   HiOutlineArrowUp,
@@ -54,6 +57,7 @@ const TIER_THRESHOLDS: Record<string, number> = { BRONZE: 0, SILVER: 500, GOLD: 
 export default function LoyaltyPage() {
   const [data, setData] = useState<LoyaltyData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   // Paginated transactions
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -63,15 +67,20 @@ export default function LoyaltyPage() {
   const txLimit = 15
   const txTotalPages = Math.ceil(txTotal / txLimit)
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get('/guest/loyalty')
-        setData(res.data.data)
-      } catch {}
+  const loadLoyalty = useCallback(async () => {
+    setLoading(true)
+    setError(false)
+    try {
+      const res = await api.get('/guest/loyalty')
+      setData(res.data.data)
+    } catch {
+      setError(true)
+    } finally {
       setLoading(false)
-    })()
+    }
   }, [])
+
+  useEffect(() => { loadLoyalty() }, [loadLoyalty])
 
   const fetchTransactions = useCallback(async (page: number) => {
     setTxLoading(true)
@@ -89,11 +98,24 @@ export default function LoyaltyPage() {
 
   if (loading) {
     return (
-      <div className="animate-pulse">
-        <div className="h-8 w-40 bg-foreground-disabled/15 rounded mb-6" />
-        <div className="h-48 bg-foreground-disabled/10 rounded-2xl mb-6" />
-        <div className="h-64 bg-foreground-disabled/10 rounded-2xl" />
+      <div>
+        <SkeletonBar className="h-8 w-40 mb-6" />
+        <SkeletonBar className="h-44 sm:h-48 rounded-2xl mb-6" />
+        <div className="grid lg:grid-cols-3 gap-6">
+          <SkeletonBar className="h-72 rounded-2xl" />
+          <SkeletonBar className="h-72 rounded-2xl lg:col-span-2" />
+        </div>
       </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Couldn't load your loyalty"
+        description="We had trouble fetching your points and tier. Please try again."
+        onRetry={loadLoyalty}
+      />
     )
   }
 
@@ -199,11 +221,22 @@ export default function LoyaltyPage() {
           </div>
 
           {txLoading && transactions.length === 0 ? (
-            <div className="space-y-3">
-              {[0, 1, 2].map(i => <div key={i} className="h-12 bg-foreground-disabled/10 rounded-lg animate-pulse" />)}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <tbody>
+                  {[0, 1, 2].map(i => <TableRowSkeleton key={i} columns={4} widths={['w-16', 'w-40', 'w-20', 'w-12 ml-auto']} />)}
+                </tbody>
+              </table>
             </div>
           ) : transactions.length === 0 ? (
-            <p className="text-foreground-tertiary text-sm text-center py-10">No transactions yet.</p>
+            <EmptyState
+              icon={<HiOutlineStar />}
+              title="No transactions yet"
+              description="Complete a booking to start earning points and climb the tiers."
+              actionLabel="Browse Rooms"
+              actionHref="/rooms"
+              className="py-8"
+            />
           ) : (
             <>
               <div className="overflow-x-auto">

@@ -1,8 +1,11 @@
 'use client'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
-import { HiOutlineSearch, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineCalendar } from 'react-icons/hi'
 import BookingDetailDrawer from '@/component/admin/BookingDetailDrawer'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { TableRowSkeleton } from '@/component/ui/PageSkeleton'
 
 interface BookingRow {
   id: string
@@ -56,6 +59,7 @@ export default function AdminBookingsPage() {
   const [rows, setRows] = useState<BookingRow[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -74,6 +78,7 @@ export default function AdminBookingsPage() {
 
   const fetchBookings = useCallback(async () => {
     setLoading(true)
+    setError(false)
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -89,6 +94,7 @@ export default function AdminBookingsPage() {
       setPagination(res.data.data.pagination || null)
     } catch {
       setRows([])
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -108,7 +114,7 @@ export default function AdminBookingsPage() {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-foreground font-heading text-2xl font-bold">Bookings</h1>
+        <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold">Bookings</h1>
         <p className="text-foreground-tertiary text-sm">Search, filter, and manage all reservations</p>
       </div>
 
@@ -176,15 +182,41 @@ export default function AdminBookingsPage() {
       {/* Table */}
       <div className="bg-foreground-inverse border border-border rounded-2xl overflow-hidden">
         {loading ? (
-          <div className="p-8">
-            <div className="h-64 bg-foreground-disabled/10 rounded-lg animate-pulse" />
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-foreground-tertiary text-[11px] uppercase tracking-wider border-b border-border bg-foreground-disabled/[0.03]">
+                  <th className="py-3 px-4 font-semibold">Ref</th>
+                  <th className="py-3 px-4 font-semibold">Guest</th>
+                  <th className="py-3 px-4 font-semibold max-md:hidden">Room</th>
+                  <th className="py-3 px-4 font-semibold max-lg:hidden">Type</th>
+                  <th className="py-3 px-4 font-semibold">Check-in</th>
+                  <th className="py-3 px-4 font-semibold max-md:hidden">Check-out</th>
+                  <th className="py-3 px-4 font-semibold max-lg:hidden">Nights</th>
+                  <th className="py-3 px-4 font-semibold">Amount</th>
+                  <th className="py-3 px-4 font-semibold">Status</th>
+                  <th className="py-3 px-4 font-semibold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[0, 1, 2, 3, 4].map(i => <TableRowSkeleton key={i} columns={10} />)}
+              </tbody>
+            </table>
           </div>
+        ) : error ? (
+          <ErrorState
+            title="Couldn't load bookings"
+            description="We had trouble fetching reservations. Please try again."
+            onRetry={fetchBookings}
+          />
         ) : rows.length === 0 ? (
-          <div className="p-16 text-center">
-            <p className="text-foreground-tertiary text-sm">
-              {hasFilters ? 'No bookings match these filters' : 'No bookings yet'}
-            </p>
-          </div>
+          <EmptyState
+            icon={<HiOutlineCalendar />}
+            title={hasFilters ? 'No bookings match these filters' : 'No bookings yet'}
+            description={hasFilters
+              ? 'Try adjusting your search, status, or date filters to see more results.'
+              : 'New reservations will appear here as guests book rooms.'}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

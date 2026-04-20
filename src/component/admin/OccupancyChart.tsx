@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   ResponsiveContainer,
   BarChart,
@@ -11,6 +11,8 @@ import {
   Legend,
 } from 'recharts'
 import { api } from '@/lib/api'
+import ErrorState from '@/component/ui/ErrorState'
+import { SkeletonBar } from '@/component/ui/PageSkeleton'
 
 interface TypeRow {
   roomType: string
@@ -31,22 +33,23 @@ const COLORS = {
 const OccupancyChart = () => {
   const [data, setData] = useState<TypeRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-    api
-      .get('/admin/stats/occupancy')
-      .then(res => {
-        if (!cancelled) setData(res.data.data.currentByType)
-      })
-      .catch(() => {
-        if (!cancelled) setData([])
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => { cancelled = true }
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(false)
+    try {
+      const res = await api.get('/admin/stats/occupancy')
+      setData(res.data.data.currentByType)
+    } catch {
+      setError(true)
+      setData([])
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => { load() }, [load])
 
   return (
     <div className="bg-foreground-inverse border border-border rounded-2xl p-5 vsm:p-6 h-full flex flex-col">
@@ -57,7 +60,14 @@ const OccupancyChart = () => {
 
       <div className="flex-1 min-h-[260px]">
         {loading ? (
-          <div className="h-full bg-foreground-disabled/10 rounded-lg animate-pulse" />
+          <SkeletonBar className="h-full rounded-lg" />
+        ) : error ? (
+          <ErrorState
+            title="Couldn't load occupancy"
+            description="Try again to fetch room occupancy data."
+            onRetry={load}
+            compact
+          />
         ) : data.length === 0 ? (
           <div className="h-full flex items-center justify-center text-foreground-tertiary text-sm">
             No room data available

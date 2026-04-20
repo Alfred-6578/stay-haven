@@ -12,7 +12,11 @@ import {
   HiOutlineSearch,
   HiOutlineClock,
 } from 'react-icons/hi'
+import { MdOutlineRoomService } from 'react-icons/md'
 import ImageUploadField from '@/component/admin/ImageUploadField'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { TableRowSkeleton, SkeletonBar } from '@/component/ui/PageSkeleton'
 
 // ── Types ──
 
@@ -93,6 +97,7 @@ export default function AdminRoomServicePage() {
   // ═══ Menu state ═══
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [menuLoading, setMenuLoading] = useState(true)
+  const [menuError, setMenuError] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<MenuItem | null>(null)
   const [form, setForm] = useState({
@@ -108,6 +113,7 @@ export default function AdminRoomServicePage() {
   // ═══ Orders state ═══
   const [orders, setOrders] = useState<RoomServiceOrder[]>([])
   const [ordersLoading, setOrdersLoading] = useState(true)
+  const [ordersError, setOrdersError] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
   const [searchQ, setSearchQ] = useState('')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
@@ -115,13 +121,14 @@ export default function AdminRoomServicePage() {
   // ── Menu fetch (all=true to include disabled) ──
   const fetchMenu = useCallback(async () => {
     setMenuLoading(true)
+    setMenuError(false)
     try {
       const res = await api.get('/room-service/menu?all=true')
       const grouped = res.data.data as Record<string, MenuItem[]>
       const flat = Object.values(grouped).flat()
       setMenuItems(flat)
     } catch {
-      toast.error('Failed to load menu')
+      setMenuError(true)
     } finally {
       setMenuLoading(false)
     }
@@ -130,13 +137,14 @@ export default function AdminRoomServicePage() {
   // ── Orders fetch ──
   const fetchOrders = useCallback(async () => {
     setOrdersLoading(true)
+    setOrdersError(false)
     try {
       const params = new URLSearchParams({ limit: '50' })
       if (statusFilter) params.set('status', statusFilter)
       const res = await api.get(`/room-service/orders?${params}`)
       setOrders(res.data.data.orders || [])
     } catch {
-      toast.error('Failed to load orders')
+      setOrdersError(true)
     } finally {
       setOrdersLoading(false)
     }
@@ -245,7 +253,7 @@ export default function AdminRoomServicePage() {
 
   return (
     <div>
-      <h1 className="text-foreground font-heading text-2xl font-bold mb-6">Room Service</h1>
+      <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold mb-6">Room Service</h1>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-foreground-disabled/10 p-1 rounded-lg w-max mb-6">
@@ -277,11 +285,27 @@ export default function AdminRoomServicePage() {
           </div>
 
           {menuLoading ? (
-            <div className="space-y-3">
-              {[0, 1, 2].map(i => <div key={i} className="h-16 bg-foreground-disabled/10 rounded-xl animate-pulse" />)}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <tbody>
+                  {[0, 1, 2, 3].map(i => <TableRowSkeleton key={i} columns={6} />)}
+                </tbody>
+              </table>
             </div>
+          ) : menuError ? (
+            <ErrorState
+              title="Couldn't load menu"
+              description="We had trouble fetching menu items. Please try again."
+              onRetry={fetchMenu}
+            />
           ) : menuItems.length === 0 ? (
-            <p className="text-foreground-tertiary text-sm text-center py-10">No menu items yet.</p>
+            <EmptyState
+              icon={<MdOutlineRoomService />}
+              title="No menu items yet"
+              description="Create your first room-service item so guests can order food, drinks, and amenities."
+              actionLabel="Add Item"
+              onAction={openAdd}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -397,10 +421,37 @@ export default function AdminRoomServicePage() {
 
           {ordersLoading ? (
             <div className="space-y-3">
-              {[0, 1, 2].map(i => <div key={i} className="h-20 bg-foreground-disabled/10 rounded-xl animate-pulse" />)}
+              {[0, 1, 2].map(i => (
+                <div key={i} className="border border-border rounded-2xl p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex flex-col gap-2">
+                      <SkeletonBar className="h-4 w-24" />
+                      <SkeletonBar className="h-3 w-32" />
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <SkeletonBar className="h-4 w-16" />
+                      <SkeletonBar className="h-3 w-12" />
+                    </div>
+                  </div>
+                  <SkeletonBar className="h-12 rounded-lg" />
+                </div>
+              ))}
             </div>
+          ) : ordersError ? (
+            <ErrorState
+              title="Couldn't load orders"
+              description="We had trouble fetching room-service orders. Please try again."
+              onRetry={fetchOrders}
+            />
           ) : filteredOrders.length === 0 ? (
-            <p className="text-foreground-tertiary text-sm text-center py-10">No orders found.</p>
+            <EmptyState
+              icon={<MdOutlineRoomService />}
+              title={searchQ || statusFilter ? 'No orders match these filters' : 'No orders yet'}
+              description={searchQ || statusFilter
+                ? 'Try clearing your search or status filter to see more.'
+                : 'Orders placed by guests will appear here.'}
+              {...(searchQ || statusFilter ? { actionLabel: 'Clear Filters', onAction: () => { setSearchQ(''); setStatusFilter('') } } : {})}
+            />
           ) : (
             <div className="space-y-3">
               {filteredOrders.map(order => {

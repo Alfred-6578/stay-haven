@@ -5,8 +5,12 @@ import { loginSchema } from "@/lib/validations";
 import { signAccessToken, signRefreshToken } from "@/lib/auth";
 import { setAuthCookies } from "@/lib/cookies";
 import { successResponse, errorResponse } from "@/lib/response";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
+  const limited = enforceRateLimit(request, "auth:login", 10, 15 * 60 * 1000);
+  if (limited) return limited;
+
   try {
     const body = await request.json();
 

@@ -20,6 +20,9 @@ import {
 import { TbCar } from 'react-icons/tb'
 import { IoWineOutline } from 'react-icons/io5'
 import ServiceBookingModal from '@/component/services/ServiceBookingModal'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { SkeletonBar, RoomCardSkeleton } from '@/component/ui/PageSkeleton'
 
 // ── Types ──
 
@@ -95,6 +98,7 @@ export default function GuestServicesPage() {
   const [myBookings, setMyBookings] = useState<ServiceBooking[]>([])
   const [activeBookings, setActiveBookings] = useState<ActiveBooking[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [tab, setTab] = useState<'browse' | 'mine'>('browse')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
@@ -102,6 +106,8 @@ export default function GuestServicesPage() {
   const [bookService, setBookService] = useState<HotelService | null>(null)
 
   const fetchAll = useCallback(async () => {
+    setLoading(true)
+    setError(false)
     try {
       const [svcRes, myRes, bkRes] = await Promise.all([
         api.get('/services'),
@@ -116,7 +122,7 @@ export default function GuestServicesPage() {
         upcoming.filter((b: ActiveBooking) => ['CONFIRMED', 'CHECKED_IN'].includes(b.status))
       )
     } catch {
-      toast.error('Failed to load services')
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -140,14 +146,25 @@ export default function GuestServicesPage() {
   if (loading) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="h-10 w-48 bg-foreground-disabled/10 rounded-lg animate-pulse" />
-        <div className="grid grid-cols-2 vsm:grid-cols-3 gap-3">
-          {[0, 1, 2, 3, 4, 5].map(i => <div key={i} className="h-14 bg-foreground-disabled/10 rounded-xl animate-pulse" />)}
+        <SkeletonBar className="h-8 w-48" />
+        <SkeletonBar className="h-4 w-64 mb-2" />
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {[0, 1, 2, 3, 4].map(i => <SkeletonBar key={i} className="shrink-0 h-9 w-28 rounded-xl" />)}
         </div>
         <div className="grid grid-cols-1 vsm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-          {[0, 1, 2].map(i => <div key={i} className="h-56 bg-foreground-disabled/10 rounded-2xl animate-pulse" />)}
+          {[0, 1, 2, 3, 4, 5].map(i => <RoomCardSkeleton key={i} />)}
         </div>
       </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Couldn't load services"
+        description="We had trouble fetching hotel services. Please try again."
+        onRetry={fetchAll}
+      />
     )
   }
 
@@ -273,10 +290,12 @@ export default function GuestServicesPage() {
 
           {/* Services grid */}
           {displayedServices.length === 0 ? (
-            <div className="text-center py-16">
-              <MdOutlineMiscellaneousServices size={32} className="text-foreground-disabled mx-auto mb-3" />
-              <p className="text-foreground-tertiary text-sm">No services available at the moment.</p>
-            </div>
+            <EmptyState
+              icon={<MdOutlineMiscellaneousServices />}
+              title="No services available"
+              description={selectedCategory ? "No services in this category yet — try a different one." : "We don't have any services listed at the moment. Please check back later."}
+              {...(selectedCategory ? { actionLabel: 'Show All', onAction: () => setSelectedCategory(null) } : {})}
+            />
           ) : (
             <div className="grid grid-cols-1 vsm:grid-cols-2 lg:grid-cols-3 gap-4">
               {displayedServices.map(svc => {
@@ -342,21 +361,13 @@ export default function GuestServicesPage() {
       {tab === 'mine' && (
         <div>
           {myBookings.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 rounded-full bg-foreground-disabled/10 flex items-center justify-center mx-auto mb-4">
-                <MdOutlineMiscellaneousServices size={28} className="text-foreground-tertiary" />
-              </div>
-              <h3 className="text-foreground font-semibold text-lg mb-1">No requests yet</h3>
-              <p className="text-foreground-tertiary text-sm mb-5 max-w-xs mx-auto">
-                Browse our available services and request what you need for your stay.
-              </p>
-              <button
-                onClick={() => setTab('browse')}
-                className="bg-foreground text-foreground-inverse text-sm font-semibold px-6 py-2.5 rounded-xl hover:opacity-90"
-              >
-                Browse Services
-              </button>
-            </div>
+            <EmptyState
+              icon={<MdOutlineMiscellaneousServices />}
+              title="No requests yet"
+              description="Browse our available services and request what you need for your stay."
+              actionLabel="Browse Services"
+              onAction={() => setTab('browse')}
+            />
           ) : (
             <div className="flex flex-col gap-3">
               {myBookings.map(sb => {

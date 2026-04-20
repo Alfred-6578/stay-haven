@@ -94,7 +94,7 @@ export default function AboutPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {stats.map((stat, i) => (
                 <div key={stat.label} className="flex items-center gap-3" style={{ opacity: vis.hero ? 1 : 0, transition: `opacity 0.5s ease-out ${0.6 + i * 0.1}s` }}>
-                  <div className="w-11 h-11 rounded-xl bg-foreground-disabled/10 flex items-center justify-center text-foreground flex-shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-foreground-disabled/10 flex items-center justify-center text-foreground shrink-0">
                     {stat.icon}
                   </div>
                   <div>

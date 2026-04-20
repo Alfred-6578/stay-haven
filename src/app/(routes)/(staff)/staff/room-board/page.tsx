@@ -11,10 +11,14 @@ import {
   HiOutlineCheck,
   HiOutlineX,
 } from 'react-icons/hi'
+import { MdOutlineKingBed } from 'react-icons/md'
 import CheckInModal, { CheckInBooking } from '@/component/staff/CheckInModal'
 import CheckOutModal, { CheckOutBooking } from '@/component/staff/CheckOutModal'
 import NoShowModal from '@/component/staff/NoShowModal'
 import OverstayModal from '@/component/staff/OverstayModal'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { SkeletonBar } from '@/component/ui/PageSkeleton'
 
 type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE'
 
@@ -56,6 +60,7 @@ export default function StaffRoomBoardPage() {
   const [arrivals, setArrivals] = useState<CheckInBooking[]>([])
   const [departures, setDepartures] = useState<CheckOutBooking[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
@@ -68,7 +73,7 @@ export default function StaffRoomBoardPage() {
   const [overstayRoom, setOverstayRoom] = useState<BoardRoom | null>(null)
 
   const fetchAll = useCallback(async (opts: { silent?: boolean } = {}) => {
-    if (!opts.silent) setLoading(true)
+    if (!opts.silent) { setLoading(true); setError(false) }
     else setRefreshing(true)
     try {
       const [roomsRes, arrivalsRes, departuresRes] = await Promise.all([
@@ -81,7 +86,7 @@ export default function StaffRoomBoardPage() {
       setDepartures(departuresRes.data.data || [])
       setLastRefresh(new Date())
     } catch {
-      if (!opts.silent) toast.error('Failed to load board')
+      if (!opts.silent) setError(true)
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -187,7 +192,7 @@ export default function StaffRoomBoardPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap mb-6">
         <div>
-          <h1 className="text-foreground font-heading text-2xl font-bold">Room Board</h1>
+          <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold">Room Board</h1>
           <p className="text-foreground-tertiary text-sm">
             Real-time status of every room. Click any room for actions.
             {lastRefresh && (
@@ -200,7 +205,7 @@ export default function StaffRoomBoardPage() {
         <button
           onClick={() => fetchAll()}
           disabled={loading || refreshing}
-          className="flex items-center gap-1.5 border border-border rounded-lg px-3 py-2 text-xs font-medium text-foreground hover:bg-foreground-disabled/5 disabled:opacity-50"
+          className="flex items-center gap-1.5 border border-border rounded-lg px-3 py-2 text-xs font-medium text-foreground hover:bg-foreground-disabled/5 disabled:opacity-50 shrink-0"
         >
           <HiOutlineRefresh size={14} className={loading || refreshing ? 'animate-spin' : ''} />
           Refresh
@@ -209,10 +214,18 @@ export default function StaffRoomBoardPage() {
 
       {loading ? (
         <div className="space-y-4">
-          <div className="h-20 bg-foreground-disabled/10 rounded-2xl animate-pulse" />
-          <div className="h-40 bg-foreground-disabled/10 rounded-2xl animate-pulse" />
-          <div className="h-60 bg-foreground-disabled/10 rounded-2xl animate-pulse" />
+          <div className="grid grid-cols-2 vsm:grid-cols-4 gap-3">
+            {[0, 1, 2, 3].map(i => <SkeletonBar key={i} className="h-20 rounded-xl" />)}
+          </div>
+          <SkeletonBar className="h-40 rounded-2xl" />
+          <SkeletonBar className="h-60 rounded-2xl" />
         </div>
+      ) : error ? (
+        <ErrorState
+          title="Couldn't load the board"
+          description="We had trouble fetching rooms and today's movements. Please try again."
+          onRetry={() => fetchAll()}
+        />
       ) : (
         <>
           {/* Stats strip */}
@@ -240,7 +253,7 @@ export default function StaffRoomBoardPage() {
                   <button
                     key={a.id}
                     onClick={() => setCheckInBooking(a)}
-                    className="flex-shrink-0 w-64 text-left bg-[#EAF3DE] hover:ring-2 hover:ring-[#4A6B2E]/20 rounded-xl p-3 transition-all"
+                    className="shrink-0 w-64 text-left bg-[#EAF3DE] hover:ring-2 hover:ring-[#4A6B2E]/20 rounded-xl p-3 transition-all"
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <p className="text-foreground font-semibold text-sm truncate">
@@ -272,7 +285,7 @@ export default function StaffRoomBoardPage() {
                     <button
                       key={d.id}
                       onClick={() => setCheckOutBooking(d)}
-                      className="flex-shrink-0 w-64 text-left bg-[#FAECE7] hover:ring-2 hover:ring-[#8A4A30]/20 rounded-xl p-3 transition-all"
+                      className="shrink-0 w-64 text-left bg-[#FAECE7] hover:ring-2 hover:ring-[#8A4A30]/20 rounded-xl p-3 transition-all"
                     >
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <p className="text-foreground font-semibold text-sm truncate">
@@ -298,7 +311,12 @@ export default function StaffRoomBoardPage() {
           <section className="bg-foreground-inverse border border-border rounded-2xl p-5 vsm:p-6">
             <h2 className="text-foreground font-semibold text-sm mb-4">Floors</h2>
             {floors.length === 0 ? (
-              <p className="text-foreground-tertiary text-sm text-center py-6">No rooms configured</p>
+              <EmptyState
+                icon={<MdOutlineKingBed />}
+                title="No rooms configured"
+                description="Ask an admin to add rooms from the admin rooms page."
+                className="py-8"
+              />
             ) : (
               <div className="flex flex-col gap-6">
                 {floors.map(({ floor, rooms }) => (

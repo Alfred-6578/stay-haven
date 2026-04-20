@@ -163,7 +163,7 @@ export default function ServicesPage() {
                   <div className="grid grid-cols-2 gap-3">
                     {service.highlights.map(h => (
                       <div key={h} className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+                        <div className="w-5 h-5 rounded-full bg-success/10 flex items-center justify-center shrink-0">
                           <HiOutlineCheck className="text-success text-xs" />
                         </div>
                         <span className="text-foreground text-sm">{h}</span>

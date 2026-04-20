@@ -14,6 +14,9 @@ import {
 } from 'react-icons/hi'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { SkeletonBar, StatCardSkeleton } from '@/component/ui/PageSkeleton'
 
 // ── Types ──
 
@@ -64,6 +67,7 @@ interface GuestSearchResult {
 export default function AdminLoyaltyPage() {
   const [data, setData] = useState<LoyaltyStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   // Award modal
   const [awardOpen, setAwardOpen] = useState(false)
@@ -77,13 +81,16 @@ export default function AdminLoyaltyPage() {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchStats = useCallback(async () => {
+    setLoading(true)
+    setError(false)
     try {
       const res = await api.get('/admin/loyalty')
       setData(res.data.data)
     } catch {
-      toast.error('Failed to load loyalty data')
+      setError(true)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -158,17 +165,28 @@ export default function AdminLoyaltyPage() {
 
   if (loading) {
     return (
-      <div className="animate-pulse">
-        <div className="h-8 w-48 bg-foreground-disabled/15 rounded mb-6" />
+      <div>
+        <SkeletonBar className="h-8 w-48 mb-6" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          {[0, 1, 2, 3].map(i => <div key={i} className="h-24 bg-foreground-disabled/10 rounded-2xl" />)}
+          {[0, 1, 2, 3].map(i => <StatCardSkeleton key={i} />)}
         </div>
-        <div className="h-64 bg-foreground-disabled/10 rounded-2xl" />
+        <div className="grid lg:grid-cols-3 gap-6">
+          <SkeletonBar className="h-72 rounded-2xl" />
+          <SkeletonBar className="h-72 rounded-2xl lg:col-span-2" />
+        </div>
       </div>
     )
   }
 
-  if (!data) return null
+  if (error || !data) {
+    return (
+      <ErrorState
+        title="Couldn't load loyalty data"
+        description="We had trouble fetching loyalty program stats. Please try again."
+        onRetry={fetchStats}
+      />
+    )
+  }
 
   // Prepare donut data
   const tierOrder = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM'] as const
@@ -183,11 +201,11 @@ export default function AdminLoyaltyPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-foreground font-heading text-2xl font-bold">Loyalty Program</h1>
+      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
+        <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold">Loyalty Program</h1>
         <button
           onClick={() => openAward()}
-          className="inline-flex items-center gap-2 bg-foreground text-foreground-inverse px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90"
+          className="inline-flex items-center gap-2 bg-foreground text-foreground-inverse px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 shrink-0"
         >
           <HiOutlinePlus size={16} />
           Award Points
@@ -231,7 +249,12 @@ export default function AdminLoyaltyPage() {
         <div className="border border-border rounded-2xl p-5 vsm:p-6">
           <h2 className="text-foreground font-semibold text-sm mb-4">Tier Breakdown</h2>
           {donutData.length === 0 ? (
-            <p className="text-foreground-tertiary text-sm text-center py-10">No guest data yet.</p>
+            <EmptyState
+              icon={<HiOutlineStar />}
+              title="No guest data yet"
+              description="Once guests start earning points, tier distribution will appear here."
+              className="py-8"
+            />
           ) : (
             <>
               <div className="h-[240px]">
@@ -283,7 +306,12 @@ export default function AdminLoyaltyPage() {
         <div className="lg:col-span-2 border border-border rounded-2xl p-5 vsm:p-6">
           <h2 className="text-foreground font-semibold text-sm mb-4">Top Guests by Lifetime Points</h2>
           {data.topGuests.length === 0 ? (
-            <p className="text-foreground-tertiary text-sm text-center py-10">No guests yet.</p>
+            <EmptyState
+              icon={<HiOutlineUser />}
+              title="No guests yet"
+              description="Top earners will appear here once guests start earning loyalty points."
+              className="py-8"
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

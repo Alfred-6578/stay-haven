@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useCallback, useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { api } from '@/lib/api'
@@ -7,6 +7,9 @@ import { HiOutlineUsers, HiOutlineArrowRight } from 'react-icons/hi'
 import { MdOutlineKingBed } from 'react-icons/md'
 import { GoHeartFill } from 'react-icons/go'
 import Pill from '../ui/Pill'
+import EmptyState from '../ui/EmptyState'
+import ErrorState from '../ui/ErrorState'
+import { RoomCardSkeleton } from '../ui/PageSkeleton'
 
 interface RoomType {
   id: string
@@ -54,6 +57,7 @@ interface Props {
 const RoomTypeGrid = ({ selectedType, checkIn, checkOut, guests, sortBy }: Props) => {
   const [roomTypes, setRoomTypes] = useState<RoomTypeWithPricing[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [hasDates, setHasDates] = useState(false)
   const gridRef = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -69,56 +73,57 @@ const RoomTypeGrid = ({ selectedType, checkIn, checkOut, guests, sortBy }: Props
     return () => observer.disconnect()
   }, [])
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true)
+  const fetchRooms = useCallback(async () => {
+    setLoading(true)
+    setError(false)
+    try {
+      if (checkIn && checkOut) {
+        // Use availability API — returns per-room results with pricing
+        setHasDates(true)
+        const params = new URLSearchParams({ checkIn, checkOut })
+        if (guests) params.set('adults', guests)
+        if (selectedType) params.set('typeId', selectedType)
 
-      try {
-        if (checkIn && checkOut) {
-          // Use availability API — returns per-room results with pricing
-          setHasDates(true)
-          const params = new URLSearchParams({ checkIn, checkOut })
-          if (guests) params.set('adults', guests)
-          if (selectedType) params.set('typeId', selectedType)
+        const res = await api.get(`/rooms/available?${params}`)
+        const results: AvailabilityResult[] = res.data.data
 
-          const res = await api.get(`/rooms/available?${params}`)
-          const results: AvailabilityResult[] = res.data.data
+        // Group by room type — show cheapest price per type, count available rooms
+        const typeMap = new Map<string, RoomTypeWithPricing>()
+        for (const r of results) {
+          const rt = r.room.roomType
+          const existing = typeMap.get(rt.id)
+          const prevCount = existing?.availableForDates || 0
 
-          // Group by room type — show cheapest price per type, count available rooms
-          const typeMap = new Map<string, RoomTypeWithPricing>()
-          for (const r of results) {
-            const rt = r.room.roomType
-            const existing = typeMap.get(rt.id)
-            const prevCount = existing?.availableForDates || 0
-
-            if (!existing || r.totalAmount < (existing.totalAmount || Infinity)) {
-              typeMap.set(rt.id, {
-                ...rt,
-                totalAmount: r.totalAmount,
-                baseAmount: r.baseAmount,
-                taxAmount: r.taxAmount,
-                totalNights: r.totalNights,
-                availableForDates: prevCount + 1,
-              })
-            } else {
-              existing.availableForDates = prevCount + 1
-            }
+          if (!existing || r.totalAmount < (existing.totalAmount || Infinity)) {
+            typeMap.set(rt.id, {
+              ...rt,
+              totalAmount: r.totalAmount,
+              baseAmount: r.baseAmount,
+              taxAmount: r.taxAmount,
+              totalNights: r.totalNights,
+              availableForDates: prevCount + 1,
+            })
+          } else {
+            existing.availableForDates = prevCount + 1
           }
-
-          setRoomTypes(Array.from(typeMap.values()))
-        } else {
-          // No dates — show catalog from room types API
-          setHasDates(false)
-          const res = await api.get('/rooms/types')
-          setRoomTypes(res.data.data)
         }
-      } catch (err) {
-        console.error('Failed to fetch rooms:', err)
-      } finally {
-        setLoading(false)
+
+        setRoomTypes(Array.from(typeMap.values()))
+      } else {
+        // No dates — show catalog from room types API
+        setHasDates(false)
+        const res = await api.get('/rooms/types')
+        setRoomTypes(res.data.data)
       }
-    })()
+    } catch (err) {
+      console.error('Failed to fetch rooms:', err)
+      setError(true)
+    } finally {
+      setLoading(false)
+    }
   }, [checkIn, checkOut, guests, selectedType])
+
+  useEffect(() => { fetchRooms() }, [fetchRooms])
 
   // Filter and sort
   let filtered = [...roomTypes]
@@ -147,22 +152,34 @@ const RoomTypeGrid = ({ selectedType, checkIn, checkOut, guests, sortBy }: Props
     return (
       <div ref={gridRef} className="grid grid-cols-1 vsm:grid-cols-2 lg:grid-cols-3 gap-5 vsm:gap-6">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className={`${i >= 2 ? 'max-vsm:hidden' : ''} ${i >= 4 ? 'max-lg:hidden' : ''} rounded-2xl bg-foreground-disabled/20 animate-pulse h-[420px]`} />
+          <div key={i} className={`${i >= 2 ? 'max-vsm:hidden' : ''} ${i >= 4 ? 'max-lg:hidden' : ''}`}>
+            <RoomCardSkeleton />
+          </div>
         ))}
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div ref={gridRef}>
+        <ErrorState
+          title="Couldn't load rooms"
+          description="We had trouble fetching available rooms. Please try again."
+          onRetry={fetchRooms}
+        />
       </div>
     )
   }
 
   if (filtered.length === 0) {
     return (
-      <div ref={gridRef} className="flex flex-col items-center justify-center py-20">
-        <MdOutlineKingBed className="text-foreground-disabled text-5xl mb-4" />
-        <h3 className="text-foreground text-xl font-heading font-semibold mb-2">
-          {hasDates ? 'No rooms available for these dates' : 'No rooms found'}
-        </h3>
-        <p className="text-foreground-tertiary text-sm">
-          {hasDates ? 'Try different dates or adjust your guest count.' : 'Try adjusting your filters or search criteria.'}
-        </p>
+      <div ref={gridRef}>
+        <EmptyState
+          icon={<MdOutlineKingBed />}
+          title={hasDates ? 'No rooms available for these dates' : 'No rooms found'}
+          description={hasDates ? 'Try different dates or adjust your guest count to see more options.' : 'Try adjusting your filters or search criteria.'}
+        />
       </div>
     )
   }
@@ -234,7 +251,7 @@ const RoomTypeGrid = ({ selectedType, checkIn, checkOut, guests, sortBy }: Props
               {/* Name + Price row */}
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-foreground font-heading text-lg vsm:text-xl font-semibold leading-tight">{rt.name}</h3>
-                <div className="text-right flex-shrink-0 ml-3">
+                <div className="text-right shrink-0 ml-3">
                   {hasDates && rt.totalAmount ? (
                     <>
                       <p className="text-foreground font-bold text-lg">${rt.totalAmount.toFixed(0)}</p>

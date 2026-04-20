@@ -2,10 +2,11 @@
 import { useSearchParams, useRouter } from 'next/navigation'
 import React, { useState, useEffect } from 'react'
 import { CiLock } from 'react-icons/ci'
-import { HiOutlineMail } from 'react-icons/hi'
+import { HiOutlineMail, HiOutlineClock, HiOutlineCheckCircle, HiOutlineBan } from 'react-icons/hi'
 import { IoEyeOffOutline, IoEyeOutline } from 'react-icons/io5'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import EmptyState from '@/component/ui/EmptyState'
 
 interface InviteData {
     valid: boolean
@@ -97,36 +98,35 @@ const InviteAcceptForm = () => {
     }
 
     if (!inviteData?.valid) {
-        const messages: Record<string, { title: string; description: string }> = {
+        const messages: Record<string, { title: string; description: string; icon: React.ReactNode }> = {
             expired: {
                 title: 'Invitation Expired',
                 description: 'This invitation has expired. Please contact your administrator to request a new one.',
+                icon: <HiOutlineClock />,
             },
             already_used: {
                 title: 'Already Accepted',
                 description: 'This invitation has already been used. Try signing in instead.',
+                icon: <HiOutlineCheckCircle />,
             },
             not_found: {
                 title: 'Invalid Invitation',
                 description: 'This invitation link is invalid. Please check the link or contact your administrator.',
+                icon: <HiOutlineBan />,
             },
         }
 
         const reason = inviteData?.reason || 'not_found'
-        const { title, description } = messages[reason] || messages.not_found
+        const { title, description, icon } = messages[reason] || messages.not_found
 
         return (
-            <div className="w-full">
-                <div className="text-center">
-                    <h1 className="font-heading text-accent text-xl tny:text-2xl sm:text-3xl mb-2">{title}</h1>
-                    <p className="text-foreground-secondary text-sm mb-6">{description}</p>
-                    {reason === 'already_used' && (
-                        <a href="/login" className="text-foreground font-medium hover:underline text-sm">
-                            Go to sign in
-                        </a>
-                    )}
-                </div>
-            </div>
+            <EmptyState
+                icon={icon}
+                title={title}
+                description={description}
+                {...(reason === 'already_used' ? { actionLabel: 'Go to Sign In', actionHref: '/login' } : {})}
+                {...(reason !== 'already_used' ? { secondaryLabel: 'Back to Home', secondaryHref: '/' } : {})}
+            />
         )
     }
 

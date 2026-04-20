@@ -14,6 +14,8 @@ import CheckInModal, { CheckInBooking } from '@/component/staff/CheckInModal'
 import CheckOutModal, { CheckOutBooking } from '@/component/staff/CheckOutModal'
 import WalkInBookingModal from '@/component/staff/walkin/WalkInBookingModal'
 import OverstayModal from '@/component/staff/OverstayModal'
+import ErrorState from '@/component/ui/ErrorState'
+import { StatCardSkeleton, SkeletonBar } from '@/component/ui/PageSkeleton'
 
 interface DashboardData {
   todayArrivals: Array<{
@@ -94,6 +96,7 @@ export default function StaffDashboard() {
   const [departures, setDepartures] = useState<CheckOutBooking[]>([])
   const [rooms, setRooms] = useState<FloorGroup[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [checkInBooking, setCheckInBooking] = useState<CheckInBooking | null>(null)
   const [checkOutBooking, setCheckOutBooking] = useState<CheckOutBooking | null>(null)
   const [walkInOpen, setWalkInOpen] = useState(false)
@@ -104,6 +107,8 @@ export default function StaffDashboard() {
   } | null>(null)
 
   const fetchAll = useCallback(async () => {
+    setLoading(true)
+    setError(false)
     try {
       const [dashRes, arrivalsRes, departuresRes, roomsRes] = await Promise.all([
         api.get('/staff/dashboard'),
@@ -116,7 +121,7 @@ export default function StaffDashboard() {
       setDepartures(departuresRes.data.data)
       setRooms(roomsRes.data.data.floors)
     } catch {
-      // errors surface via toast at action level
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -145,23 +150,36 @@ export default function StaffDashboard() {
   if (loading) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[0, 1, 2, 3].map(i => <div key={i} className="h-24 bg-foreground-disabled/10 rounded-2xl animate-pulse" />)}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <SkeletonBar className="h-8 w-48" />
+          <SkeletonBar className="h-10 w-40 rounded-lg" />
         </div>
-        <div className="h-64 bg-foreground-disabled/10 rounded-2xl animate-pulse" />
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          {[0, 1, 2, 3, 4].map(i => <StatCardSkeleton key={i} />)}
+        </div>
+        <SkeletonBar className="h-48 rounded-2xl" />
+        <SkeletonBar className="h-48 rounded-2xl" />
       </div>
     )
   }
 
-  if (!data) return null
+  if (error || !data) {
+    return (
+      <ErrorState
+        title="Couldn't load the dashboard"
+        description="We had trouble fetching today's activity. Please try again."
+        onRetry={fetchAll}
+      />
+    )
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
-        <h1 className="text-foreground font-heading text-2xl font-bold">Staff Dashboard</h1>
+        <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold">Staff Dashboard</h1>
         <button
           onClick={() => setWalkInOpen(true)}
-          className="inline-flex items-center gap-2 bg-foreground text-foreground-inverse px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90"
+          className="inline-flex items-center gap-2 bg-foreground text-foreground-inverse px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 shrink-0"
         >
           <HiOutlinePlus size={16} />
           Walk-in Booking

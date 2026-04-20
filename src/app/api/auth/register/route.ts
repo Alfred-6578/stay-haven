@@ -6,8 +6,12 @@ import { signAccessToken, signRefreshToken } from "@/lib/auth";
 import { setAuthCookies } from "@/lib/cookies";
 import { successResponse, errorResponse } from "@/lib/response";
 import { welcomeEmail } from "@/lib/email";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
+  const limited = enforceRateLimit(request, "auth:register", 5, 60 * 60 * 1000);
+  if (limited) return limited;
+
   try {
     const body = await request.json();
 

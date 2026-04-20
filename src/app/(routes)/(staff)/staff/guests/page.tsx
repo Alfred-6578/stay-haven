@@ -2,10 +2,13 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
-import { HiOutlineSearch, HiOutlineChevronDown, HiOutlineChevronUp, HiOutlineLogin, HiOutlineLogout, HiOutlineExclamation } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineChevronDown, HiOutlineChevronUp, HiOutlineLogin, HiOutlineLogout, HiOutlineExclamation, HiOutlineUsers } from 'react-icons/hi'
 import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
 import CheckInModal, { CheckInBooking } from '@/component/staff/CheckInModal'
 import CheckOutModal, { CheckOutBooking } from '@/component/staff/CheckOutModal'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { SkeletonBar } from '@/component/ui/PageSkeleton'
 
 interface GuestSearchResult {
   id: string
@@ -116,6 +119,7 @@ export default function StaffGuestsPage() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<GuestSearchResult[]>([])
   const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [detailMap, setDetailMap] = useState<Record<string, GuestDetail>>({})
   const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null)
@@ -125,23 +129,31 @@ export default function StaffGuestsPage() {
   const [checkInBooking, setCheckInBooking] = useState<CheckInBooking | null>(null)
   const [checkOutBooking, setCheckOutBooking] = useState<CheckOutBooking | null>(null)
 
+  const runSearch = async (q: string) => {
+    setSearching(true)
+    setSearchError(false)
+    try {
+      const res = await api.get(`/staff/guests/search?q=${encodeURIComponent(q)}`)
+      setResults(res.data.data)
+    } catch {
+      setResults([])
+      setSearchError(true)
+    } finally {
+      setSearching(false)
+    }
+  }
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (!query.trim()) {
       setResults([])
       setSearching(false)
+      setSearchError(false)
       return
     }
     setSearching(true)
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const res = await api.get(`/staff/guests/search?q=${encodeURIComponent(query.trim())}`)
-        setResults(res.data.data)
-      } catch {
-        setResults([])
-      } finally {
-        setSearching(false)
-      }
+    debounceRef.current = setTimeout(() => {
+      runSearch(query.trim())
     }, 300)
 
     return () => {
@@ -252,7 +264,7 @@ export default function StaffGuestsPage() {
 
   return (
     <div>
-      <h1 className="text-foreground font-heading text-2xl font-bold mb-2">Guest Lookup</h1>
+      <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold mb-2">Guest Lookup</h1>
       <p className="text-foreground-tertiary text-sm mb-6">Search by name, email, phone, or booking reference.</p>
 
       {/* Search */}
@@ -269,20 +281,27 @@ export default function StaffGuestsPage() {
 
       {/* Results */}
       {!query.trim() ? (
-        <div className="text-center py-16">
-          <HiOutlineSearch size={32} className="text-foreground-disabled mx-auto mb-3" />
-          <p className="text-foreground-tertiary text-sm">Start typing to find a guest</p>
-        </div>
+        <EmptyState
+          icon={<HiOutlineSearch />}
+          title="Find a guest"
+          description="Start typing to search by name, email, phone, or booking reference."
+        />
       ) : searching ? (
         <div className="flex flex-col gap-2">
-          {[0, 1, 2].map(i => (
-            <div key={i} className="h-16 bg-foreground-disabled/10 rounded-xl animate-pulse" />
-          ))}
+          {[0, 1, 2].map(i => <SkeletonBar key={i} className="h-16 rounded-xl" />)}
         </div>
+      ) : searchError ? (
+        <ErrorState
+          title="Couldn't search"
+          description="We had trouble running your search. Please try again."
+          onRetry={() => runSearch(query.trim())}
+        />
       ) : results.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-foreground-tertiary text-sm">No guests match &ldquo;{query}&rdquo;</p>
-        </div>
+        <EmptyState
+          icon={<HiOutlineUsers />}
+          title={`No guests match "${query}"`}
+          description="Try a different name, email, phone, or booking reference."
+        />
       ) : (
         <div className="flex flex-col gap-2">
           {results.map(guest => {
@@ -294,21 +313,21 @@ export default function StaffGuestsPage() {
                   onClick={() => toggleExpand(guest.id)}
                   className="w-full flex items-center gap-4 px-4 py-3 hover:bg-foreground-disabled/5 transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-full bg-foreground-disabled/15 flex items-center justify-center text-foreground font-semibold text-sm flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-foreground-disabled/15 flex items-center justify-center text-foreground font-semibold text-sm shrink-0">
                     {guest.firstName.charAt(0)}{guest.lastName.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-foreground font-semibold text-sm truncate">{guest.firstName} {guest.lastName}</p>
                     <p className="text-foreground-tertiary text-xs truncate">{guest.email}</p>
                   </div>
-                  <div className="hidden vsm:flex items-center gap-2 flex-shrink-0">
+                  <div className="hidden vsm:flex items-center gap-2 shrink-0">
                     {guest.guestProfile && <LoyaltyTierBadge tier={guest.guestProfile.loyaltyTier as 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM'} />}
                     {guest.latestBooking && <StatusBadge status={guest.latestBooking.status} />}
                   </div>
                   {expanded ? (
-                    <HiOutlineChevronUp size={18} className="text-foreground-tertiary flex-shrink-0" />
+                    <HiOutlineChevronUp size={18} className="text-foreground-tertiary shrink-0" />
                   ) : (
-                    <HiOutlineChevronDown size={18} className="text-foreground-tertiary flex-shrink-0" />
+                    <HiOutlineChevronDown size={18} className="text-foreground-tertiary shrink-0" />
                   )}
                 </button>
 
@@ -442,7 +461,7 @@ function GuestDetailPanel({
                         {new Date(b.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – {new Date(b.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </p>
                     </div>
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <div className="flex flex-col items-end gap-1 shrink-0">
                       <StatusBadge status={b.status} />
                       <p className="text-foreground text-xs font-semibold">${Number(b.totalAmount).toFixed(2)}</p>
                     </div>

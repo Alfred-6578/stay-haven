@@ -2,10 +2,13 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
-import { HiOutlineUserAdd, HiOutlineSearch, HiOutlinePencil, HiOutlineBan, HiOutlineRefresh } from 'react-icons/hi'
+import { HiOutlineUserAdd, HiOutlineSearch, HiOutlinePencil, HiOutlineBan, HiOutlineRefresh, HiOutlineUsers, HiOutlineMail } from 'react-icons/hi'
 import InviteStaffModal from '@/component/admin/InviteStaffModal'
 import StaffEditModal, { StaffRecord } from '@/component/admin/StaffEditModal'
 import ConfirmModal from '@/component/ui/ConfirmModal'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { TableRowSkeleton } from '@/component/ui/PageSkeleton'
 
 interface Invite {
   id: string
@@ -49,6 +52,7 @@ export default function AdminStaffPage() {
   const [staff, setStaff] = useState<StaffRecord[]>([])
   const [invites, setInvites] = useState<Invite[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   const [inviteOpen, setInviteOpen] = useState(false)
   const [editing, setEditing] = useState<StaffRecord | null>(null)
@@ -59,6 +63,7 @@ export default function AdminStaffPage() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
+    setError(false)
     try {
       const params = new URLSearchParams()
       if (search.trim()) params.set('search', search.trim())
@@ -74,7 +79,7 @@ export default function AdminStaffPage() {
       setStaff(staffRes.data.data.staff || [])
       setInvites(invitesRes.data.data || [])
     } catch {
-      toast.error('Failed to load staff')
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -137,7 +142,7 @@ export default function AdminStaffPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap mb-6">
         <div>
-          <h1 className="text-foreground font-heading text-2xl font-bold">Staff</h1>
+          <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold">Staff</h1>
           <p className="text-foreground-tertiary text-sm">Manage team members and pending invitations</p>
         </div>
         <button
@@ -176,7 +181,8 @@ export default function AdminStaffPage() {
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              className={`text-xs font-medium px-3 py-1.5 rounded-md transition-colors capitalize ${
+              disabled={loading}
+              className={`text-xs font-medium px-3 py-1.5 rounded-md transition-colors capitalize disabled:cursor-not-allowed disabled:opacity-60 ${
                 activeFilter === f ? 'bg-foreground-inverse text-foreground shadow-sm' : 'text-foreground-secondary'
               }`}
             >
@@ -189,9 +195,35 @@ export default function AdminStaffPage() {
       {/* Staff table */}
       <div className="bg-foreground-inverse border border-border rounded-2xl overflow-hidden mb-6">
         {loading ? (
-          <div className="p-8"><div className="h-40 bg-foreground-disabled/10 rounded-lg animate-pulse" /></div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <tbody>
+                {[0, 1, 2, 3].map(i => <TableRowSkeleton key={i} columns={7} />)}
+              </tbody>
+            </table>
+          </div>
+        ) : error ? (
+          <ErrorState
+            title="Couldn't load staff"
+            description="We had trouble fetching team members. Please try again."
+            onRetry={fetchAll}
+          />
         ) : staff.length === 0 ? (
-          <div className="p-16 text-center text-foreground-tertiary text-sm">No staff match these filters</div>
+          <EmptyState
+            icon={<HiOutlineUsers />}
+            title={search || department || activeFilter !== 'active' ? 'No staff match these filters' : 'No staff yet'}
+            description={search || department || activeFilter !== 'active'
+              ? 'Try clearing your filters to see more team members.'
+              : 'Invite your first team member to get started.'}
+            actionLabel={search || department || activeFilter !== 'active' ? 'Clear Filters' : 'Invite Staff'}
+            onAction={() => {
+              if (search || department || activeFilter !== 'active') {
+                setSearch(''); setDepartment(''); setActiveFilter('active')
+              } else {
+                setInviteOpen(true)
+              }
+            }}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -211,7 +243,7 @@ export default function AdminStaffPage() {
                   <tr key={m.id} className="border-b border-border last:border-0 hover:bg-foreground-disabled/[0.02]">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#0B1B3A] text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-[#0B1B3A] text-white flex items-center justify-center text-xs font-semibold shrink-0">
                           {m.firstName.charAt(0)}{m.lastName.charAt(0)}
                         </div>
                         <div className="min-w-0">
@@ -298,7 +330,14 @@ export default function AdminStaffPage() {
         </div>
 
         {invites.length === 0 ? (
-          <div className="p-8 text-center text-foreground-tertiary text-sm">No invites sent yet</div>
+          <EmptyState
+            icon={<HiOutlineMail />}
+            title="No invites sent"
+            description="Invite new team members via email — they'll receive a link to set up their account."
+            actionLabel="Invite Staff"
+            onAction={() => setInviteOpen(true)}
+            className="py-10"
+          />
         ) : (
           <div className="divide-y divide-border">
             {invites.map(inv => (

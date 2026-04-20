@@ -9,6 +9,7 @@ import {
   HiOutlineClock,
 } from 'react-icons/hi'
 import { api } from '@/lib/api'
+import { TAX_LABEL } from '@/lib/pricing'
 
 interface Props {
   bookingId: string
@@ -217,7 +218,7 @@ const ExtendStayModal = ({ bookingId, currentCheckOut, onClose, onSuccess }: Pro
                       <span>{formatNaira(check.additionalAmount)}</span>
                     </div>
                     <div className="flex justify-between text-foreground-secondary">
-                      <span>Tax (10%)</span>
+                      <span>{TAX_LABEL}</span>
                       <span>{formatNaira(check.taxAmount)}</span>
                     </div>
                     <div className="flex justify-between pt-2 mt-1 border-t border-border text-foreground font-bold text-sm">
