@@ -8,6 +8,7 @@ import Button from '@/component/ui/Button'
 import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
 import PayRoomServiceModal from '@/component/room-service/PayRoomServiceModal'
 import UpgradeOptionsModal from '@/component/booking/UpgradeOptionsModal'
+import ExtendStayModal from '@/component/booking/ExtendStayModal'
 import PaymentPolling from '@/component/booking/PaymentPolling'
 import { toast } from 'sonner'
 import { HiOutlineCalendar, HiOutlineUsers, HiOutlineArrowLeft, HiOutlineArrowUp, HiOutlineClock, HiOutlineCheck, HiOutlineX as HiOutlineXMark } from 'react-icons/hi'
@@ -57,7 +58,7 @@ interface BookingDetail {
     priceDifference: string | number
     requestedType: { name: string; basePrice: string | number }
   } | null
-  stayExtension: { id: string; status: string; newCheckOut: string; additionalNights: number; additionalAmount: string | number } | null
+  stayExtension: { id: string; status: string; newCheckOut: string; additionalNights: number; additionalAmount: string | number; paymentReference: string | null } | null
   roomServiceBalance: {
     unsettledTotal: number
     settledTotal: number
@@ -84,6 +85,9 @@ export default function BookingDetailPage() {
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [upgradePaying, setUpgradePaying] = useState(false)
   const [upgradePayment, setUpgradePayment] = useState<{ reference: string } | null>(null)
+  const [extendOpen, setExtendOpen] = useState(false)
+  const [extendPaying, setExtendPaying] = useState(false)
+  const [extendPayment, setExtendPayment] = useState<{ reference: string } | null>(null)
 
   const refreshBooking = async () => {
     try {
@@ -113,6 +117,22 @@ export default function BookingDetailPage() {
       toast.error(msg)
     } finally {
       setUpgradePaying(false)
+    }
+  }
+
+  const handleExtendPay = async () => {
+    if (!booking) return
+    setExtendPaying(true)
+    try {
+      const res = await api.post(`/bookings/${booking.id}/extend/pay-link`)
+      const { authorizationUrl, reference } = res.data.data
+      setExtendPayment({ reference })
+      window.open(authorizationUrl, '_blank', 'width=600,height=700,scrollbars=yes')
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to start payment'
+      toast.error(msg)
+    } finally {
+      setExtendPaying(false)
     }
   }
 
@@ -405,6 +425,100 @@ export default function BookingDetailPage() {
             </div>
           )}
 
+          {/* Extend Stay Section */}
+          {['CONFIRMED', 'CHECKED_IN'].includes(booking.status) && (
+            <div className="border border-border rounded-xl p-5">
+              <h3 className="text-foreground font-semibold text-sm mb-3 flex items-center gap-2">
+                <HiOutlineCalendar size={16} />
+                Extend Stay
+              </h3>
+              {booking.stayExtension ? (
+                (() => {
+                  const ex = booking.stayExtension
+                  const awaitingPayment = ex.status === 'PENDING' && !!ex.paymentReference
+                  const statusLabel = awaitingPayment ? 'AWAITING PAYMENT' : ex.status
+                  const statusStyle = awaitingPayment
+                    ? 'bg-[#E0F2FE] text-[#0369A1]'
+                    : ex.status === 'PENDING'
+                      ? 'bg-warning-bg text-warning'
+                      : ex.status === 'APPROVED'
+                        ? 'bg-success-bg text-success'
+                        : 'bg-danger-bg text-danger'
+                  const newCheckout = new Date(ex.newCheckOut).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-foreground-secondary text-sm">
+                          +{ex.additionalNights} night{ex.additionalNights !== 1 ? 's' : ''} · {newCheckout}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${statusStyle}`}>
+                          {statusLabel}
+                        </span>
+                      </div>
+                      {ex.status === 'PENDING' && !ex.paymentReference && (
+                        <p className="text-foreground-tertiary text-xs flex items-center gap-1">
+                          <HiOutlineClock size={12} />
+                          Your extension request is under review.
+                        </p>
+                      )}
+                      {awaitingPayment && (
+                        <>
+                          <p className="text-foreground text-xs mb-3">
+                            Your extension is approved! Pay to confirm your new checkout date.
+                          </p>
+                          <button
+                            onClick={handleExtendPay}
+                            disabled={extendPaying}
+                            className="w-full bg-foreground text-foreground-inverse rounded-lg py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                            {extendPaying && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                            {extendPaying ? 'Opening Paystack…' : 'Pay Now'}
+                          </button>
+                        </>
+                      )}
+                      {ex.status === 'APPROVED' && (
+                        <p className="text-success text-xs flex items-center gap-1">
+                          <HiOutlineCheck size={12} />
+                          Your stay has been extended.
+                        </p>
+                      )}
+                      {ex.status === 'REJECTED' && (
+                        <>
+                          <p className="text-foreground-tertiary text-xs mb-2 flex items-center gap-1">
+                            <HiOutlineXMark size={12} />
+                            Your previous request was declined.
+                          </p>
+                          <button
+                            onClick={() => setExtendOpen(true)}
+                            className="w-full border border-border rounded-lg py-2 text-sm text-foreground font-medium hover:bg-foreground-disabled/5"
+                          >
+                            Try Again
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )
+                })()
+              ) : (
+                <div>
+                  <p className="text-foreground-tertiary text-xs mb-3">
+                    Need a few more days? Extend your stay if your room is available.
+                  </p>
+                  <button
+                    onClick={() => setExtendOpen(true)}
+                    className="w-full bg-foreground text-foreground-inverse rounded-lg py-2.5 text-sm font-semibold hover:opacity-90"
+                  >
+                    Extend Stay
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex flex-col gap-2">
             {canCancel && (
@@ -457,6 +571,15 @@ export default function BookingDetailPage() {
         />
       )}
 
+      {extendOpen && (
+        <ExtendStayModal
+          bookingId={booking.id}
+          currentCheckOut={booking.checkOut}
+          onClose={() => setExtendOpen(false)}
+          onSuccess={refreshBooking}
+        />
+      )}
+
       {upgradePayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-foreground/40" />
@@ -471,6 +594,25 @@ export default function BookingDetailPage() {
                 toast.success('Upgrade confirmed — your new room is ready!')
               }}
               onRetry={() => setUpgradePayment(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {extendPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-foreground/40" />
+          <div className="relative w-full max-w-md bg-foreground-inverse rounded-2xl shadow-xl p-6">
+            <PaymentPolling
+              reference={extendPayment.reference}
+              bookingId={booking.id}
+              statusPath={`/payments/extension/status/${extendPayment.reference}`}
+              onSuccess={() => {
+                setExtendPayment(null)
+                refreshBooking()
+                toast.success('Stay extended!')
+              }}
+              onRetry={() => setExtendPayment(null)}
             />
           </div>
         </div>

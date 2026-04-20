@@ -98,7 +98,8 @@ export default function StaffOrdersPage() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              disabled={loading}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                 active ? 'border-foreground text-foreground' : 'border-transparent text-foreground-tertiary hover:text-foreground'
               }`}
             >

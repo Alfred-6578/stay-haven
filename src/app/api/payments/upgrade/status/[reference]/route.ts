@@ -122,12 +122,16 @@ export const GET = withAuth<{ reference: string }>(
         ? `${booking.guest.firstName} ${booking.guest.lastName}`
         : "Guest";
       const bookingRef = booking?.bookingRef || "";
-      notifyRoles(["STAFF", "MANAGER", "ADMIN"], {
-        title: "Upgrade Paid",
-        message: `${guestName} paid ₦${Number(pending.amount).toLocaleString()} for upgrade to ${data.requestedTypeName} — now in Room ${data.newRoomNumber} (${bookingRef}).`,
-        type: "UPGRADE_APPROVED",
-        bookingId: data.bookingId,
-      }).catch((e) => console.error("notifyRoles (upgrade paid) failed:", e));
+      try {
+        await notifyRoles(["STAFF", "MANAGER", "ADMIN"], {
+          title: "Upgrade Paid",
+          message: `${guestName} paid ₦${Number(pending.amount).toLocaleString()} for upgrade to ${data.requestedTypeName} — now in Room ${data.newRoomNumber} (${bookingRef}).`,
+          type: "UPGRADE_APPROVED",
+          bookingId: data.bookingId,
+        });
+      } catch (e) {
+        console.error("notifyRoles (upgrade paid) failed:", e);
+      }
 
       return successResponse({ status: "COMPLETED" });
     } catch (error) {

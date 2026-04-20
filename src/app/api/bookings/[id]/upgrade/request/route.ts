@@ -159,13 +159,19 @@ export const POST = withAuth<{ id: string }>(
         bookingId: id,
       });
 
-      // Notify admins of the pending upgrade
-      notifyRoles(["ADMIN", "MANAGER"], {
-        title: "Upgrade Request Pending",
-        message: `New upgrade request to ${upgrade.requestedType.name} (${booking.bookingRef}) needs review.`,
-        type: "GENERAL",
-        bookingId: id,
-      }).catch((e) => console.error("notifyRoles (upgrade) failed:", e));
+      // Notify admins of the pending upgrade. Awaited so the insert
+      // completes before we return — fire-and-forget gets cut off on
+      // serverless runtimes once the response is sent.
+      try {
+        await notifyRoles(["ADMIN", "MANAGER"], {
+          title: "Upgrade Request Pending",
+          message: `New upgrade request to ${upgrade.requestedType.name} (${booking.bookingRef}) needs review.`,
+          type: "GENERAL",
+          bookingId: id,
+        });
+      } catch (e) {
+        console.error("notifyRoles (upgrade) failed:", e);
+      }
 
       return successResponse(upgrade, "Upgrade request submitted", 201);
     } catch (error) {

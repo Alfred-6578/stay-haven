@@ -213,14 +213,18 @@ export const GET = withAuth<{ reference: string }>(
         "en-US",
         { month: "short", day: "numeric" }
       );
-      notifyRoles(["STAFF", "MANAGER", "ADMIN"], {
-        title: "New Booking",
-        message: isGroup
-          ? `${guestName} booked ${bookings.length} rooms arriving ${arrivalDate} (${data.groupRef}).`
-          : `${guestName} booked ${bookings[0].bookingRef} arriving ${arrivalDate}.`,
-        type: "BOOKING_CONFIRMED",
-        bookingId: firstBookingId,
-      }).catch((e) => console.error("notifyRoles (booking) failed:", e));
+      try {
+        await notifyRoles(["STAFF", "MANAGER", "ADMIN"], {
+          title: "New Booking",
+          message: isGroup
+            ? `${guestName} booked ${bookings.length} rooms arriving ${arrivalDate} (${data.groupRef}).`
+            : `${guestName} booked ${bookings[0].bookingRef} arriving ${arrivalDate}.`,
+          type: "BOOKING_CONFIRMED",
+          bookingId: firstBookingId,
+        });
+      } catch (e) {
+        console.error("notifyRoles (booking) failed:", e);
+      }
 
       if (bookings[0]?.guest) {
         bookingConfirmationEmail(
