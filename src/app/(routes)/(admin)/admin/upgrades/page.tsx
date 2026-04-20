@@ -9,6 +9,9 @@ import {
   HiOutlineExclamation,
 } from 'react-icons/hi'
 import ConfirmModal from '@/component/ui/ConfirmModal'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { TableRowSkeleton } from '@/component/ui/PageSkeleton'
 
 interface UpgradeRequest {
   id: string
@@ -52,6 +55,7 @@ const TABS = ['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const
 export default function AdminUpgradesPage() {
   const [upgrades, setUpgrades] = useState<UpgradeRequest[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [tab, setTab] = useState<string>('PENDING')
   const [processing, setProcessing] = useState<string | null>(null)
 
@@ -64,14 +68,16 @@ export default function AdminUpgradesPage() {
 
   const fetchUpgrades = useCallback(async () => {
     setLoading(true)
+    setError(false)
     try {
       const params = tab !== 'ALL' ? `?status=${tab}` : ''
       const res = await api.get(`/admin/upgrades${params}`)
       setUpgrades(res.data.data.upgrades || [])
     } catch {
-      toast.error('Failed to load upgrade requests')
+      setError(true)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [tab])
 
   useEffect(() => {
@@ -119,7 +125,7 @@ export default function AdminUpgradesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-foreground font-heading text-2xl font-bold">Room Upgrades</h1>
+          <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold">Room Upgrades</h1>
           {pendingCount > 0 && (
             <p className="text-foreground-tertiary text-sm mt-1">
               {pendingCount} pending request{pendingCount !== 1 ? 's' : ''}
@@ -145,14 +151,28 @@ export default function AdminUpgradesPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          {[0, 1, 2].map(i => <div key={i} className="h-20 bg-foreground-disabled/10 rounded-xl animate-pulse" />)}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <tbody>
+              {[0, 1, 2, 3].map(i => <TableRowSkeleton key={i} columns={8} />)}
+            </tbody>
+          </table>
         </div>
+      ) : error ? (
+        <ErrorState
+          title="Couldn't load upgrades"
+          description="We had trouble fetching upgrade requests. Please try again."
+          onRetry={fetchUpgrades}
+        />
       ) : upgrades.length === 0 ? (
-        <div className="text-center py-16">
-          <HiOutlineArrowUp size={28} className="text-foreground-disabled mx-auto mb-3" />
-          <p className="text-foreground-tertiary text-sm">No upgrade requests{tab !== 'ALL' ? ` with status ${tab.toLowerCase()}` : ''}.</p>
-        </div>
+        <EmptyState
+          icon={<HiOutlineArrowUp />}
+          title={tab === 'PENDING' ? 'No pending upgrades' : `No ${tab === 'ALL' ? '' : tab.toLowerCase() + ' '}upgrades`}
+          description={tab === 'PENDING'
+            ? "You're all caught up — no upgrade requests need review."
+            : 'Upgrade requests will appear here as guests submit them.'}
+          {...(tab !== 'ALL' ? { actionLabel: 'View All', onAction: () => setTab('ALL') } : {})}
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

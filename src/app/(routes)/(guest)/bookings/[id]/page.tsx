@@ -1,15 +1,19 @@
 'use client'
-import React, { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import React, { useCallback, useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import Button from '@/component/ui/Button'
-import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
 import PayRoomServiceModal from '@/component/room-service/PayRoomServiceModal'
 import UpgradeOptionsModal from '@/component/booking/UpgradeOptionsModal'
 import ExtendStayModal from '@/component/booking/ExtendStayModal'
 import PaymentPolling from '@/component/booking/PaymentPolling'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import ConfirmModal from '@/component/ui/ConfirmModal'
+import { SkeletonBar } from '@/component/ui/PageSkeleton'
+import { TAX_LABEL } from '@/lib/pricing'
 import { toast } from 'sonner'
 import { HiOutlineCalendar, HiOutlineUsers, HiOutlineArrowLeft, HiOutlineArrowUp, HiOutlineClock, HiOutlineCheck, HiOutlineX as HiOutlineXMark } from 'react-icons/hi'
 import { MdOutlineKingBed } from 'react-icons/md'
@@ -77,10 +81,11 @@ const statusColors: Record<string, string> = {
 
 export default function BookingDetailPage() {
   const { id } = useParams()
-  const router = useRouter()
   const [booking, setBooking] = useState<BookingDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
   const [payOpen, setPayOpen] = useState(false)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [upgradePaying, setUpgradePaying] = useState(false)
@@ -89,20 +94,23 @@ export default function BookingDetailPage() {
   const [extendPaying, setExtendPaying] = useState(false)
   const [extendPayment, setExtendPayment] = useState<{ reference: string } | null>(null)
 
-  const refreshBooking = async () => {
+  const refreshBooking = useCallback(async () => {
     try {
       const res = await api.get(`/guest/bookings/${id}`)
       setBooking(res.data.data)
-    } catch {}
-  }
-
-  useEffect(() => {
-    (async () => {
-      await refreshBooking()
-      setLoading(false)
-    })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      setError(false)
+    } catch {
+      setError(true)
+    }
   }, [id])
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    await refreshBooking()
+    setLoading(false)
+  }, [refreshBooking])
+
+  useEffect(() => { load() }, [load])
 
   const handleUpgradePay = async () => {
     if (!booking) return
@@ -137,34 +145,68 @@ export default function BookingDetailPage() {
   }
 
   const handleCancel = async () => {
-    if (!confirm('Are you sure you want to cancel this booking?')) return
     setCancelling(true)
     try {
       await api.patch(`/bookings/${id}/cancel`)
       setBooking(prev => prev ? { ...prev, status: 'CANCELLED' } : prev)
-    } catch {}
-    setCancelling(false)
+      toast.success('Booking cancelled')
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to cancel booking'
+      toast.error(msg)
+    } finally {
+      setCancelling(false)
+      setConfirmCancel(false)
+    }
   }
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })
 
   if (loading) {
     return (
-      <div className="animate-pulse">
-        <div className="h-6 w-32 bg-foreground-disabled/15 rounded mb-6" />
-        <div className="h-64 bg-foreground-disabled/10 rounded-2xl mb-6" />
-        <div className="h-48 bg-foreground-disabled/10 rounded-2xl" />
+      <div>
+        <SkeletonBar className="h-4 w-32 mb-6" />
+        <div className="flex flex-col sm:flex-row gap-5 mb-8">
+          <SkeletonBar className="w-full sm:w-48 h-36 rounded-xl shrink-0" />
+          <div className="flex-1 flex flex-col gap-2 py-2">
+            <SkeletonBar className="h-6 w-48" />
+            <SkeletonBar className="h-4 w-32" />
+            <SkeletonBar className="h-4 w-24 mt-2" />
+          </div>
+        </div>
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            <SkeletonBar className="h-40 rounded-xl" />
+            <SkeletonBar className="h-48 rounded-xl" />
+          </div>
+          <div className="flex flex-col gap-6">
+            <SkeletonBar className="h-40 rounded-xl" />
+            <SkeletonBar className="h-32 rounded-xl" />
+          </div>
+        </div>
       </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Couldn't load this booking"
+        description="We had trouble fetching the booking details. Please try again."
+        onRetry={load}
+        homeHref="/bookings"
+      />
     )
   }
 
   if (!booking) {
     return (
-      <div className="text-center py-16">
-        <MdOutlineKingBed size={40} className="text-foreground-disabled mx-auto mb-3" />
-        <h2 className="text-foreground font-semibold text-lg mb-2">Booking not found</h2>
-        <Button href="/bookings" variant="outline" size="sm">Back to Bookings</Button>
-      </div>
+      <EmptyState
+        icon={<MdOutlineKingBed />}
+        title="Booking not found"
+        description="We couldn't find this booking. It may have been cancelled or you may have followed an outdated link."
+        actionLabel="Back to Bookings"
+        actionHref="/bookings"
+      />
     )
   }
 
@@ -179,7 +221,7 @@ export default function BookingDetailPage() {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-5 mb-8">
-        <div className="relative w-full sm:w-48 h-36 rounded-xl overflow-hidden flex-shrink-0">
+        <div className="relative w-full sm:w-48 h-36 rounded-xl overflow-hidden shrink-0">
           <Image src={booking.room.roomType.image || '/room_2.jpeg'} alt="" fill className="object-cover" />
         </div>
         <div className="flex-1">
@@ -231,7 +273,7 @@ export default function BookingDetailPage() {
                 <span>${Number(booking.baseAmount).toFixed(0)}</span>
               </div>
               <div className="flex justify-between text-foreground-secondary">
-                <span>Tax (10%)</span>
+                <span>{TAX_LABEL}</span>
                 <span>${Number(booking.taxAmount).toFixed(0)}</span>
               </div>
               {Number(booking.discountAmount) > 0 && (
@@ -523,7 +565,7 @@ export default function BookingDetailPage() {
           <div className="flex flex-col gap-2">
             {canCancel && (
               <Button
-                onClick={handleCancel}
+                onClick={() => setConfirmCancel(true)}
                 loading={cancelling}
                 variant="danger"
                 fullWidth
@@ -617,6 +659,18 @@ export default function BookingDetailPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmCancel}
+        title="Cancel this booking?"
+        message="Cancellation is final. If you're within 24 hours of check-in a fee may apply."
+        confirmLabel="Cancel Booking"
+        cancelLabel="Keep Booking"
+        variant="danger"
+        loading={cancelling}
+        onConfirm={handleCancel}
+        onCancel={() => setConfirmCancel(false)}
+      />
     </div>
   )
 }

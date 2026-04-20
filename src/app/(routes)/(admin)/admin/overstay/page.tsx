@@ -4,6 +4,9 @@ import { api } from '@/lib/api'
 import { toast } from 'sonner'
 import { HiOutlineExclamation, HiOutlineBell, HiOutlineRefresh } from 'react-icons/hi'
 import ConfirmModal from '@/component/ui/ConfirmModal'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { TableRowSkeleton } from '@/component/ui/PageSkeleton'
 
 interface OverstayItem {
   booking: { id: string; bookingRef: string }
@@ -24,19 +27,20 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000 // 5 min
 export default function AdminOverstayPage() {
   const [items, setItems] = useState<OverstayItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [notifyingId, setNotifyingId] = useState<string | null>(null)
   const [bulkOpen, setBulkOpen] = useState(false)
   const [bulkLoading, setBulkLoading] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
   const fetchOverstays = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true)
+    if (!silent) { setLoading(true); setError(false) }
     try {
       const res = await api.get('/admin/overstay/check')
       setItems(res.data.data)
       setLastRefresh(new Date())
     } catch {
-      if (!silent) toast.error('Failed to load overstays')
+      if (!silent) setError(true)
     } finally {
       if (!silent) setLoading(false)
     }
@@ -82,7 +86,7 @@ export default function AdminOverstayPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
         <div>
-          <h1 className="text-foreground font-heading text-2xl font-bold">Overstay</h1>
+          <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold">Overstay</h1>
           <p className="text-foreground-tertiary text-sm mt-1">
             Guests past their scheduled checkout.
             {lastRefresh && (
@@ -90,7 +94,7 @@ export default function AdminOverstayPage() {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => fetchOverstays()}
             disabled={loading}
@@ -113,7 +117,7 @@ export default function AdminOverstayPage() {
       {/* Warning banner */}
       {items.length > 0 && (
         <div className="bg-danger-bg border border-danger/20 rounded-xl p-4 mb-6 flex items-start gap-3">
-          <HiOutlineExclamation size={20} className="text-danger flex-shrink-0 mt-0.5" />
+          <HiOutlineExclamation size={20} className="text-danger shrink-0 mt-0.5" />
           <div>
             <p className="text-foreground font-semibold text-sm">
               {items.length} guest{items.length !== 1 ? 's' : ''} currently overstaying
@@ -128,17 +132,25 @@ export default function AdminOverstayPage() {
       {/* Table */}
       <div className="bg-foreground-inverse border border-border rounded-2xl overflow-hidden">
         {loading ? (
-          <div className="p-8">
-            <div className="h-40 bg-foreground-disabled/10 rounded-lg animate-pulse" />
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <tbody>
+                {[0, 1, 2].map(i => <TableRowSkeleton key={i} columns={5} />)}
+              </tbody>
+            </table>
           </div>
+        ) : error ? (
+          <ErrorState
+            title="Couldn't load overstays"
+            description="We had trouble checking for overstayed guests. Please try again."
+            onRetry={() => fetchOverstays()}
+          />
         ) : items.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-success-bg flex items-center justify-center">
-              <HiOutlineBell size={22} className="text-success" />
-            </div>
-            <p className="text-foreground font-medium">All clear</p>
-            <p className="text-foreground-tertiary text-sm mt-1">No overstayed guests right now.</p>
-          </div>
+          <EmptyState
+            icon={<HiOutlineBell />}
+            title="All clear"
+            description="No overstayed guests right now. We'll auto-refresh every few minutes."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

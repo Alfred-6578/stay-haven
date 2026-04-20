@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { TAX_RATE } from "@/lib/pricing";
 
 interface RoomTypeForPricing {
   basePrice: number | string | { toNumber?: () => number };
@@ -56,7 +57,7 @@ export function calculateBookingPrice(
   const baseAmount =
     Math.round(nightBreakdown.reduce((sum, n) => sum + n.price, 0) * 100) /
     100;
-  const taxAmount = Math.round(baseAmount * 0.1 * 100) / 100;
+  const taxAmount = Math.round(baseAmount * TAX_RATE * 100) / 100;
   const totalAmount = Math.round((baseAmount + taxAmount) * 100) / 100;
 
   return {

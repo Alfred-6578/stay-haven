@@ -2,7 +2,11 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { HiOutlineRefresh } from 'react-icons/hi'
+import { MdOutlineRoomService } from 'react-icons/md'
 import OrderQueueCard, { QueueOrder } from '@/component/staff/OrderQueueCard'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { SkeletonBar } from '@/component/ui/PageSkeleton'
 
 type Tab = 'PENDING' | 'PREPARING' | 'ALL'
 
@@ -18,12 +22,13 @@ export default function StaffOrdersPage() {
   const [tab, setTab] = useState<Tab>('PENDING')
   const [orders, setOrders] = useState<QueueOrder[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
   const fetchOrders = useCallback(
     async (opts: { silent?: boolean } = {}) => {
-      if (!opts.silent) setLoading(true)
+      if (!opts.silent) { setLoading(true); setError(false) }
       else setRefreshing(true)
       try {
         const params = new URLSearchParams({ limit: '50' })
@@ -32,7 +37,7 @@ export default function StaffOrdersPage() {
         setOrders(res.data.data.orders || [])
         setLastRefresh(new Date())
       } catch {
-        if (!opts.silent) setOrders([])
+        if (!opts.silent) { setOrders([]); setError(true) }
       } finally {
         setLoading(false)
         setRefreshing(false)
@@ -122,19 +127,24 @@ export default function StaffOrdersPage() {
       {/* Grid */}
       {loading ? (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {[0, 1, 2, 3].map(i => <div key={i} className="h-52 bg-foreground-disabled/10 rounded-2xl animate-pulse" />)}
+          {[0, 1, 2, 3].map(i => <SkeletonBar key={i} className="h-52 rounded-2xl" />)}
         </div>
+      ) : error ? (
+        <ErrorState
+          title="Couldn't load orders"
+          description="We had trouble fetching the order queue. Please try again."
+          onRetry={() => fetchOrders()}
+        />
       ) : orders.length === 0 ? (
-        <div className="bg-foreground-inverse border border-border rounded-2xl p-16 text-center">
-          <p className="text-foreground font-medium">No {tab === 'ALL' ? '' : tab.toLowerCase()} orders</p>
-          <p className="text-foreground-tertiary text-sm mt-1">
-            {tab === 'PENDING'
-              ? 'New orders will appear here as guests place them.'
-              : tab === 'PREPARING'
-              ? 'Orders you start preparing will show up here.'
-              : 'Nothing to show yet.'}
-          </p>
-        </div>
+        <EmptyState
+          icon={<MdOutlineRoomService />}
+          title={`No ${tab === 'ALL' ? '' : tab.toLowerCase() + ' '}orders`}
+          description={tab === 'PENDING'
+            ? "You're all caught up — new orders will appear here as guests place them."
+            : tab === 'PREPARING'
+              ? "Orders you start preparing will show up here."
+              : "Nothing to show yet."}
+        />
       ) : (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
           {orders.map(order => (

@@ -132,7 +132,7 @@ const Facilities = () => {
           {roomTypes.map((rt, i) => (
             <div
               key={rt.id}
-              className="min-w-[260px] vsm:min-w-[280px] sm:min-w-[300px] flex-shrink-0"
+              className="min-w-[260px] vsm:min-w-[280px] sm:min-w-[300px] shrink-0"
               style={{
                 opacity: visible ? 1 : 0,
                 transform: visible ? 'translateY(0)' : 'translateY(24px)',

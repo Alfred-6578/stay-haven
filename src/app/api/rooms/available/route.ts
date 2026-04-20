@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
+import { TAX_RATE } from "@/lib/pricing";
 
 function isWeekend(date: Date): boolean {
   const day = date.getDay();
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
         current.setDate(current.getDate() + 1);
       }
 
-      const taxAmount = Math.round(baseAmount * 0.1 * 100) / 100;
+      const taxAmount = Math.round(baseAmount * TAX_RATE * 100) / 100;
       const totalAmount = Math.round((baseAmount + taxAmount) * 100) / 100;
 
       return {

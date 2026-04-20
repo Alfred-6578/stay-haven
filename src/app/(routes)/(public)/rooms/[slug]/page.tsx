@@ -1,15 +1,17 @@
 'use client'
-import React, { useState, useEffect, useRef, Suspense } from 'react'
+import React, { useCallback, useState, useEffect, useRef, Suspense } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
-import Button from '@/component/ui/Button'
 import Footer from '@/component/landingPage/Footer'
 import ImageGallery from '@/component/rooms/ImageGallery'
 import Lightbox from '@/component/rooms/Lightbox'
 import RoomInfo from '@/component/rooms/RoomInfo'
 import BookingCard from '@/component/rooms/BookingCard'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { SkeletonBar } from '@/component/ui/PageSkeleton'
 import { MdOutlineKingBed } from 'react-icons/md'
 import { IoChevronForward } from 'react-icons/io5'
 
@@ -45,7 +47,8 @@ function RoomDetailContent() {
 
   const [roomType, setRoomType] = useState<RoomType | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [notFound, setNotFound] = useState(false)
+  const [loadError, setLoadError] = useState(false)
 
   const [checkIn, setCheckIn] = useState(searchParams.get('checkIn') || '')
   const [checkOut, setCheckOut] = useState(searchParams.get('checkOut') || '')
@@ -80,18 +83,23 @@ function RoomDetailContent() {
     return () => observers.forEach(o => o.disconnect())
   }, [loading])
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get(`/rooms/types/${slug}`)
-        setRoomType(res.data.data)
-      } catch {
-        setError('Room type not found')
-      } finally {
-        setLoading(false)
-      }
-    })()
+  const loadRoomType = useCallback(async () => {
+    setLoading(true)
+    setLoadError(false)
+    setNotFound(false)
+    try {
+      const res = await api.get(`/rooms/types/${slug}`)
+      setRoomType(res.data.data)
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 404) setNotFound(true)
+      else setLoadError(true)
+    } finally {
+      setLoading(false)
+    }
   }, [slug])
+
+  useEffect(() => { loadRoomType() }, [loadRoomType])
 
   useEffect(() => {
     if (!checkIn || !checkOut || !roomType) return
@@ -133,27 +141,52 @@ function RoomDetailContent() {
   if (loading) {
     return (
       <div className="bg-foreground-inverse min-h-screen">
-        <div className="px-4 vsm:px-8 pt-6 animate-pulse">
-          <div className="h-4 w-40 bg-foreground-disabled/20 rounded mb-6" />
+        <div className="px-4 vsm:px-8 pt-6">
+          <SkeletonBar className="h-4 w-40 mb-6" />
           <div className="grid lg:grid-cols-3 gap-3 mb-8">
-            <div className="lg:col-span-2 h-72 vsm:h-96 bg-foreground-disabled/15 rounded-2xl" />
+            <SkeletonBar className="lg:col-span-2 h-72 vsm:h-96 rounded-2xl" />
             <div className="hidden lg:grid grid-rows-2 gap-3">
-              <div className="bg-foreground-disabled/15 rounded-2xl" />
-              <div className="bg-foreground-disabled/15 rounded-2xl" />
+              <SkeletonBar className="rounded-2xl" />
+              <SkeletonBar className="rounded-2xl" />
             </div>
+          </div>
+          <div className="grid lg:grid-cols-3 gap-8 lg:gap-10">
+            <div className="lg:col-span-2 flex flex-col gap-3">
+              <SkeletonBar className="h-8 w-2/3" />
+              <SkeletonBar className="h-4 w-1/3" />
+              <SkeletonBar className="h-24 mt-3" />
+              <SkeletonBar className="h-20 mt-3" />
+            </div>
+            <SkeletonBar className="h-96 rounded-2xl" />
           </div>
         </div>
       </div>
     )
   }
 
-  if (error || !roomType) {
+  if (loadError) {
     return (
-      <div className="bg-foreground-inverse min-h-screen flex flex-col items-center justify-center px-5">
-        <MdOutlineKingBed className="text-foreground-disabled text-6xl mb-4" />
-        <h2 className="text-foreground text-2xl font-heading font-semibold mb-2">Room Not Found</h2>
-        <p className="text-foreground-tertiary text-sm mb-6">This room type doesn&apos;t exist or has been removed.</p>
-        <Button href="/rooms" variant="outline">Back to Rooms</Button>
+      <div className="bg-foreground-inverse min-h-screen flex items-center justify-center px-5">
+        <ErrorState
+          title="Couldn't load this room"
+          description="We had trouble fetching this room type. Please try again."
+          onRetry={loadRoomType}
+          homeHref="/rooms"
+        />
+      </div>
+    )
+  }
+
+  if (notFound || !roomType) {
+    return (
+      <div className="bg-foreground-inverse min-h-screen flex items-center justify-center px-5">
+        <EmptyState
+          icon={<MdOutlineKingBed />}
+          title="Room not found"
+          description="This room type doesn't exist or has been removed. Browse our available rooms to find your perfect stay."
+          actionLabel="Back to Rooms"
+          actionHref="/rooms"
+        />
       </div>
     )
   }

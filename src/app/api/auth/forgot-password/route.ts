@@ -3,10 +3,19 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/response";
 import { passwordResetEmail } from "@/lib/email";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
 
 export async function POST(request: NextRequest) {
+  const limited = enforceRateLimit(
+    request,
+    "auth:forgot-password",
+    3,
+    60 * 60 * 1000
+  );
+  if (limited) return limited;
+
   try {
     const { email } = await request.json();
 

@@ -2,6 +2,9 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { SkeletonBar } from '@/component/ui/PageSkeleton'
 import {
   HiOutlineBell,
   HiOutlineCheck,
@@ -52,12 +55,14 @@ interface Props {
 const NotificationsList = ({ title = 'Notifications' }: Props) => {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
   const fetch = useCallback(async () => {
     setLoading(true)
+    setError(false)
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -68,7 +73,7 @@ const NotificationsList = ({ title = 'Notifications' }: Props) => {
       setNotifications(res.data.data.notifications || [])
       setTotalPages(res.data.data.pagination?.totalPages || 1)
     } catch {
-      toast.error('Failed to load notifications')
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -113,9 +118,9 @@ const NotificationsList = ({ title = 'Notifications' }: Props) => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
+      <div className="flex items-start sm:items-center justify-between mb-6 gap-3 flex-wrap">
         <div>
-          <h1 className="text-foreground font-heading text-2xl font-bold">{title}</h1>
+          <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold">{title}</h1>
           <p className="text-foreground-tertiary text-sm mt-1">
             Stay up to date with activity across your account.
           </p>
@@ -123,10 +128,11 @@ const NotificationsList = ({ title = 'Notifications' }: Props) => {
         {unreadOnPage > 0 && (
           <button
             onClick={markAllRead}
-            className="inline-flex items-center gap-1.5 text-foreground text-xs font-semibold px-3 py-2 border border-border rounded-lg hover:bg-foreground-disabled/5"
+            className="inline-flex items-center gap-1.5 text-foreground text-xs font-semibold px-3 py-2 border border-border rounded-lg hover:bg-foreground-disabled/5 shrink-0"
           >
             <HiOutlineCheckCircle size={14} />
-            Mark all as read
+            <span className="max-xsm:hidden">Mark all as read</span>
+            <span className="xsm:hidden">Mark all</span>
           </button>
         )}
       </div>
@@ -137,7 +143,8 @@ const NotificationsList = ({ title = 'Notifications' }: Props) => {
           <button
             key={f}
             onClick={() => { setFilter(f); setPage(1) }}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            disabled={loading}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
               filter === f
                 ? 'bg-foreground text-foreground-inverse shadow-sm'
                 : 'text-foreground-secondary hover:text-foreground'
@@ -149,23 +156,33 @@ const NotificationsList = ({ title = 'Notifications' }: Props) => {
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          {[0, 1, 2, 3].map(i => <div key={i} className="h-20 bg-foreground-disabled/10 rounded-xl animate-pulse" />)}
+        <div className="flex flex-col gap-3">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className="border border-border rounded-xl p-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <SkeletonBar className="h-4 w-40" />
+                <SkeletonBar className="h-3 w-12" />
+              </div>
+              <SkeletonBar className="h-3 w-full mb-1" />
+              <SkeletonBar className="h-3 w-4/5" />
+            </div>
+          ))}
         </div>
+      ) : error ? (
+        <ErrorState
+          title="Couldn't load notifications"
+          description="We had trouble fetching your notifications. Please try again."
+          onRetry={fetch}
+        />
       ) : notifications.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="w-16 h-16 rounded-full bg-foreground-disabled/10 flex items-center justify-center mx-auto mb-4">
-            <HiOutlineBell size={26} className="text-foreground-tertiary" />
-          </div>
-          <h3 className="text-foreground font-semibold text-lg mb-1">
-            {filter === 'unread' ? 'All caught up' : 'No notifications yet'}
-          </h3>
-          <p className="text-foreground-tertiary text-sm">
-            {filter === 'unread'
-              ? "You've read every notification. Nice."
-              : "You'll see updates here as they happen."}
-          </p>
-        </div>
+        <EmptyState
+          icon={<HiOutlineBell />}
+          title={filter === 'unread' ? 'All caught up' : 'No notifications yet'}
+          description={filter === 'unread'
+            ? "You've read every notification. Nice."
+            : "You'll see updates here as they happen."}
+          {...(filter === 'unread' ? { actionLabel: 'View All', onAction: () => setFilter('all') } : {})}
+        />
       ) : (
         <>
           <div className="flex flex-col gap-2">
@@ -215,7 +232,7 @@ const NotificationsList = ({ title = 'Notifications' }: Props) => {
                       )}
                       <button
                         onClick={() => handleDelete(n.id)}
-                        className="inline-flex items-center gap-1 text-foreground-tertiary text-xs hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="inline-flex items-center gap-1 text-foreground-tertiary text-xs hover:text-danger sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                       >
                         <HiOutlineTrash size={12} />
                         Delete

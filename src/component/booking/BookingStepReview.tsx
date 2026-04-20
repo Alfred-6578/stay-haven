@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Button from '@/component/ui/Button'
 import { HiOutlineCalendar, HiOutlineUsers } from 'react-icons/hi'
 import { MdOutlineKingBed } from 'react-icons/md'
+import { TAX_LABEL } from '@/lib/pricing'
 
 interface NightBreakdown {
   date: string
@@ -128,7 +129,7 @@ const BookingStepReview = ({
             <span>${baseAmount.toFixed(0)}</span>
           </div>
           <div className="flex justify-between text-sm text-foreground-secondary mb-2">
-            <span>Tax (10%)</span>
+            <span>{TAX_LABEL}</span>
             <span>${taxAmount.toFixed(0)}</span>
           </div>
           <div className="flex justify-between text-foreground font-bold text-lg pt-3 border-t border-border mt-2">

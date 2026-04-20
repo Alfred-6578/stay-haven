@@ -3,6 +3,7 @@ import React from 'react'
 import { HiOutlineCheck } from 'react-icons/hi'
 import { BsShieldCheck } from 'react-icons/bs'
 import Button from '@/component/ui/Button'
+import { TAX_LABEL } from '@/lib/pricing'
 
 interface AvailabilityResult {
   room: { id: string; number: string; floor: number }
@@ -150,7 +151,7 @@ const BookingCard = ({
                     <span>${combinedBase.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between text-foreground-secondary">
-                    <span>Tax (10%)</span>
+                    <span>{TAX_LABEL}</span>
                     <span>${combinedTax.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between text-foreground font-bold text-base pt-2.5 mt-1 border-t border-border">

@@ -10,7 +10,11 @@ import {
   HiOutlineSearch,
   HiOutlineBan,
 } from 'react-icons/hi'
+import { MdOutlineMiscellaneousServices } from 'react-icons/md'
 import ImageUploadField from '@/component/admin/ImageUploadField'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { TableRowSkeleton } from '@/component/ui/PageSkeleton'
 
 // ── Types ──
 
@@ -67,6 +71,7 @@ export default function AdminServicesPage() {
   // Catalog
   const [services, setServices] = useState<HotelService[]>([])
   const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<HotelService | null>(null)
   const [form, setForm] = useState({ name: '', description: '', price: '', category: 'SPA' as string, image: '' })
@@ -75,6 +80,7 @@ export default function AdminServicesPage() {
   // Bookings
   const [bookings, setBookings] = useState<ServiceBooking[]>([])
   const [bookingsLoading, setBookingsLoading] = useState(true)
+  const [bookingsError, setBookingsError] = useState(false)
   const [dateFilter, setDateFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [searchQ, setSearchQ] = useState('')
@@ -83,11 +89,12 @@ export default function AdminServicesPage() {
   // ── Catalog fetch ──
   const fetchCatalog = useCallback(async () => {
     setCatalogLoading(true)
+    setCatalogError(false)
     try {
       const res = await api.get('/services?all=true')
       setServices(res.data.data.services || [])
     } catch {
-      toast.error('Failed to load services')
+      setCatalogError(true)
     } finally {
       setCatalogLoading(false)
     }
@@ -96,6 +103,7 @@ export default function AdminServicesPage() {
   // ── Bookings fetch ──
   const fetchBookings = useCallback(async () => {
     setBookingsLoading(true)
+    setBookingsError(false)
     try {
       const params = new URLSearchParams({ limit: '50' })
       if (dateFilter) params.set('date', dateFilter)
@@ -103,7 +111,7 @@ export default function AdminServicesPage() {
       const res = await api.get(`/services/bookings?${params}`)
       setBookings(res.data.data.bookings || [])
     } catch {
-      toast.error('Failed to load service bookings')
+      setBookingsError(true)
     } finally {
       setBookingsLoading(false)
     }
@@ -210,7 +218,7 @@ export default function AdminServicesPage() {
 
   return (
     <div>
-      <h1 className="text-foreground font-heading text-2xl font-bold mb-6">Hotel Services</h1>
+      <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold mb-6">Hotel Services</h1>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-foreground-disabled/10 p-1 rounded-lg w-max mb-6">
@@ -242,9 +250,27 @@ export default function AdminServicesPage() {
           </div>
 
           {catalogLoading ? (
-            <div className="space-y-3">
-              {[0, 1, 2].map(i => <div key={i} className="h-16 bg-foreground-disabled/10 rounded-xl animate-pulse" />)}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <tbody>
+                  {[0, 1, 2, 3].map(i => <TableRowSkeleton key={i} columns={5} />)}
+                </tbody>
+              </table>
             </div>
+          ) : catalogError ? (
+            <ErrorState
+              title="Couldn't load services"
+              description="We had trouble fetching the service catalog. Please try again."
+              onRetry={fetchCatalog}
+            />
+          ) : services.length === 0 ? (
+            <EmptyState
+              icon={<MdOutlineMiscellaneousServices />}
+              title="No services yet"
+              description="Add your first hotel service — spa, laundry, transport, and more — so guests can book during their stay."
+              actionLabel="Add Service"
+              onAction={openAdd}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -330,11 +356,28 @@ export default function AdminServicesPage() {
           </div>
 
           {bookingsLoading ? (
-            <div className="space-y-3">
-              {[0, 1, 2].map(i => <div key={i} className="h-14 bg-foreground-disabled/10 rounded-xl animate-pulse" />)}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <tbody>
+                  {[0, 1, 2, 3].map(i => <TableRowSkeleton key={i} columns={7} />)}
+                </tbody>
+              </table>
             </div>
+          ) : bookingsError ? (
+            <ErrorState
+              title="Couldn't load service bookings"
+              description="We had trouble fetching service bookings. Please try again."
+              onRetry={fetchBookings}
+            />
           ) : filteredBookings.length === 0 ? (
-            <p className="text-foreground-tertiary text-sm text-center py-10">No service bookings found.</p>
+            <EmptyState
+              icon={<MdOutlineMiscellaneousServices />}
+              title={searchQ || dateFilter || statusFilter ? 'No bookings match these filters' : 'No service bookings yet'}
+              description={searchQ || dateFilter || statusFilter
+                ? 'Try clearing filters to see more results.'
+                : 'Service bookings will appear here as guests submit requests.'}
+              {...(searchQ || dateFilter || statusFilter ? { actionLabel: 'Clear Filters', onAction: () => { setSearchQ(''); setDateFilter(''); setStatusFilter('') } } : {})}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

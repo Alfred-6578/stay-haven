@@ -11,10 +11,14 @@ import {
   HiOutlineTable,
   HiOutlinePhotograph,
 } from 'react-icons/hi'
+import { MdOutlineKingBed } from 'react-icons/md'
 import RoomTypeFormModal from '@/component/admin/RoomTypeFormModal'
 import RoomFormModal from '@/component/admin/RoomFormModal'
 import RoomStatusBoardAdmin, { AdminRoom } from '@/component/admin/RoomStatusBoardAdmin'
 import ConfirmModal from '@/component/ui/ConfirmModal'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { RoomCardSkeleton, TableRowSkeleton } from '@/component/ui/PageSkeleton'
 
 interface RoomType {
   id: string
@@ -56,6 +60,7 @@ export default function AdminRoomsPage() {
   const [types, setTypes] = useState<RoomType[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [roomsView, setRoomsView] = useState<RoomsView>('table')
 
   // Type modal
@@ -73,6 +78,7 @@ export default function AdminRoomsPage() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
+    setError(false)
     try {
       const [typesRes, roomsRes] = await Promise.all([
         api.get('/rooms/types'),
@@ -81,7 +87,7 @@ export default function AdminRoomsPage() {
       setTypes(typesRes.data.data || [])
       setRooms(roomsRes.data.data?.rooms || roomsRes.data.data || [])
     } catch {
-      toast.error('Failed to load rooms data')
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -150,7 +156,7 @@ export default function AdminRoomsPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap mb-6">
         <div>
-          <h1 className="text-foreground font-heading text-2xl font-bold">Rooms</h1>
+          <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold">Rooms</h1>
           <p className="text-foreground-tertiary text-sm">Manage room types and individual rooms</p>
         </div>
         <button
@@ -158,18 +164,19 @@ export default function AdminRoomsPage() {
             if (tab === 'types') { setEditingType(null); setTypeModalOpen(true) }
             else { setEditingRoom(null); setRoomModalOpen(true) }
           }}
-          className="flex items-center gap-2 bg-[#0B1B3A] text-white rounded-lg px-4 py-2 text-sm font-semibold hover:opacity-90"
+          className="flex items-center gap-2 bg-[#0B1B3A] text-white rounded-lg px-4 py-2 text-sm font-semibold hover:opacity-90 shrink-0"
         >
           <HiOutlinePlus size={16} />
-          {tab === 'types' ? 'Add Room Type' : 'Add Room'}
+          {tab === 'types' ? 'Add Type' : 'Add Room'}
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-border mb-6">
+      <div className="flex gap-1 border-b border-border mb-6 overflow-x-auto">
         <button
           onClick={() => setTab('types')}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+          disabled={loading}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60 ${
             tab === 'types' ? 'border-[#D97706] text-foreground' : 'border-transparent text-foreground-tertiary hover:text-foreground'
           }`}
         >
@@ -177,7 +184,8 @@ export default function AdminRoomsPage() {
         </button>
         <button
           onClick={() => setTab('rooms')}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+          disabled={loading}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60 ${
             tab === 'rooms' ? 'border-[#D97706] text-foreground' : 'border-transparent text-foreground-tertiary hover:text-foreground'
           }`}
         >
@@ -187,14 +195,38 @@ export default function AdminRoomsPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="grid vsm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[0, 1, 2, 3, 4, 5].map(i => <div key={i} className="h-56 bg-foreground-disabled/10 rounded-2xl animate-pulse" />)}
-        </div>
+        tab === 'types' ? (
+          <div className="grid vsm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[0, 1, 2, 3, 4, 5].map(i => <RoomCardSkeleton key={i} />)}
+          </div>
+        ) : (
+          <div className="bg-foreground-inverse border border-border rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <tbody>
+                  {[0, 1, 2, 3, 4].map(i => <TableRowSkeleton key={i} columns={6} />)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      ) : error ? (
+        <ErrorState
+          title="Couldn't load rooms"
+          description="We had trouble fetching rooms and types. Please try again."
+          onRetry={fetchAll}
+        />
       ) : tab === 'types' ? (
         <div className="grid vsm:grid-cols-2 lg:grid-cols-3 gap-4">
           {types.length === 0 ? (
-            <div className="col-span-full text-center py-16 text-foreground-tertiary text-sm">
-              No room types yet. Click &quot;Add Room Type&quot; to create one.
+            <div className="col-span-full">
+              <EmptyState
+                icon={<MdOutlineKingBed />}
+                title="No room types yet"
+                description="Create your first room type — e.g. Deluxe, Suite, Standard — before adding individual rooms."
+                actionLabel="Add Room Type"
+                onAction={() => { setEditingType(null); setTypeModalOpen(true) }}
+              />
             </div>
           ) : types.map(type => (
             <div key={type.id} className="bg-foreground-inverse border border-border rounded-2xl overflow-hidden flex flex-col hover:border-foreground-disabled/50 transition-colors">
@@ -277,9 +309,18 @@ export default function AdminRoomsPage() {
           {roomsView === 'table' ? (
             <div className="bg-foreground-inverse border border-border rounded-2xl overflow-hidden">
               {rooms.length === 0 ? (
-                <div className="p-16 text-center text-foreground-tertiary text-sm">
-                  No rooms yet. Click &quot;Add Room&quot; to create one.
-                </div>
+                <EmptyState
+                  icon={<MdOutlineKingBed />}
+                  title="No rooms yet"
+                  description={types.length === 0
+                    ? "Create a room type first, then add individual rooms to it."
+                    : "Add your first room to start accepting bookings."}
+                  actionLabel={types.length === 0 ? 'Add Room Type' : 'Add Room'}
+                  onAction={() => {
+                    if (types.length === 0) { setTab('types'); setEditingType(null); setTypeModalOpen(true) }
+                    else { setEditingRoom(null); setRoomModalOpen(true) }
+                  }}
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">

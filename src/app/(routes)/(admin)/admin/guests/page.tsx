@@ -1,9 +1,12 @@
 'use client'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
-import { HiOutlineSearch, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineUsers } from 'react-icons/hi'
 import LoyaltyTierBadge from '@/component/guest/LoyaltyTierBadge'
 import GuestDetailDrawer from '@/component/admin/GuestDetailDrawer'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { TableRowSkeleton } from '@/component/ui/PageSkeleton'
 
 interface GuestRow {
   id: string
@@ -55,6 +58,7 @@ export default function AdminGuestsPage() {
   const [rows, setRows] = useState<GuestRow[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -72,6 +76,7 @@ export default function AdminGuestsPage() {
 
   const fetchGuests = useCallback(async () => {
     setLoading(true)
+    setError(false)
     try {
       const params = new URLSearchParams({ page: String(page), limit: '15' })
       if (searchDebounced) params.set('q', searchDebounced)
@@ -82,6 +87,7 @@ export default function AdminGuestsPage() {
       setPagination(res.data.data.pagination || null)
     } catch {
       setRows([])
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -92,7 +98,7 @@ export default function AdminGuestsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-foreground font-heading text-2xl font-bold">Guests</h1>
+        <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold">Guests</h1>
         <p className="text-foreground-tertiary text-sm">View all registered guests and award loyalty points</p>
       </div>
 
@@ -113,7 +119,8 @@ export default function AdminGuestsPage() {
             <button
               key={t || 'all'}
               onClick={() => { setTier(t); setPage(1) }}
-              className={`text-xs font-medium px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
+              disabled={loading}
+              className={`text-xs font-medium px-3 py-1.5 rounded-md transition-colors whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60 ${
                 tier === t ? 'bg-foreground-inverse text-foreground shadow-sm' : 'text-foreground-secondary'
               }`}
             >
@@ -126,9 +133,28 @@ export default function AdminGuestsPage() {
       {/* Table */}
       <div className="bg-foreground-inverse border border-border rounded-2xl overflow-hidden">
         {loading ? (
-          <div className="p-8"><div className="h-64 bg-foreground-disabled/10 rounded-lg animate-pulse" /></div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <tbody>
+                {[0, 1, 2, 3, 4].map(i => <TableRowSkeleton key={i} columns={7} />)}
+              </tbody>
+            </table>
+          </div>
+        ) : error ? (
+          <ErrorState
+            title="Couldn't load guests"
+            description="We had trouble fetching the guest list. Please try again."
+            onRetry={fetchGuests}
+          />
         ) : rows.length === 0 ? (
-          <div className="p-16 text-center text-foreground-tertiary text-sm">No guests match these filters</div>
+          <EmptyState
+            icon={<HiOutlineUsers />}
+            title={searchDebounced || tier ? 'No guests match these filters' : 'No guests yet'}
+            description={searchDebounced || tier
+              ? 'Try adjusting your search or tier filter to see more.'
+              : 'Registered guests will appear here as they sign up.'}
+            {...(searchDebounced || tier ? { actionLabel: 'Clear Filters', onAction: () => { setSearch(''); setTier(''); setPage(1) } } : {})}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -148,7 +174,7 @@ export default function AdminGuestsPage() {
                   <tr key={g.id} className="border-b border-border last:border-0 hover:bg-foreground-disabled/[0.02]">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-foreground-disabled/15 flex items-center justify-center text-foreground font-semibold text-xs flex-shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-foreground-disabled/15 flex items-center justify-center text-foreground font-semibold text-xs shrink-0">
                           {g.firstName.charAt(0)}{g.lastName.charAt(0)}
                         </div>
                         <div className="min-w-0">

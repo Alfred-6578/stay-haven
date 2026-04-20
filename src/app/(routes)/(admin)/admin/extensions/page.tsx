@@ -4,6 +4,10 @@ import { api } from '@/lib/api'
 import { toast } from 'sonner'
 import { HiOutlineCalendar, HiOutlineX, HiOutlineCheck } from 'react-icons/hi'
 import ConfirmModal from '@/component/ui/ConfirmModal'
+import EmptyState from '@/component/ui/EmptyState'
+import ErrorState from '@/component/ui/ErrorState'
+import { TableRowSkeleton } from '@/component/ui/PageSkeleton'
+import { TAX_RATE } from '@/lib/pricing'
 
 interface Extension {
   id: string
@@ -38,6 +42,7 @@ const TABS = ['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const
 export default function AdminExtensionsPage() {
   const [extensions, setExtensions] = useState<Extension[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [tab, setTab] = useState<string>('PENDING')
   const [processing, setProcessing] = useState<string | null>(null)
   const [confirmAction, setConfirmAction] = useState<{
@@ -47,14 +52,16 @@ export default function AdminExtensionsPage() {
 
   const fetchExtensions = useCallback(async () => {
     setLoading(true)
+    setError(false)
     try {
       const params = tab !== 'ALL' ? `?status=${tab}` : ''
       const res = await api.get(`/admin/extensions${params}`)
       setExtensions(res.data.data.extensions || [])
     } catch {
-      toast.error('Failed to load extensions')
+      setError(true)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [tab])
 
   useEffect(() => {
@@ -101,7 +108,7 @@ export default function AdminExtensionsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-foreground font-heading text-2xl font-bold">Stay Extensions</h1>
+          <h1 className="text-foreground font-heading text-xl sm:text-2xl font-bold">Stay Extensions</h1>
           {pendingCount > 0 && (
             <p className="text-foreground-tertiary text-sm mt-1">
               {pendingCount} pending extension{pendingCount !== 1 ? 's' : ''}
@@ -127,16 +134,28 @@ export default function AdminExtensionsPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          {[0, 1, 2].map(i => <div key={i} className="h-20 bg-foreground-disabled/10 rounded-xl animate-pulse" />)}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <tbody>
+              {[0, 1, 2, 3].map(i => <TableRowSkeleton key={i} columns={8} />)}
+            </tbody>
+          </table>
         </div>
+      ) : error ? (
+        <ErrorState
+          title="Couldn't load extensions"
+          description="We had trouble fetching extension requests. Please try again."
+          onRetry={fetchExtensions}
+        />
       ) : extensions.length === 0 ? (
-        <div className="text-center py-16">
-          <HiOutlineCalendar size={28} className="text-foreground-disabled mx-auto mb-3" />
-          <p className="text-foreground-tertiary text-sm">
-            No extensions{tab !== 'ALL' ? ` with status ${tab.toLowerCase()}` : ''}.
-          </p>
-        </div>
+        <EmptyState
+          icon={<HiOutlineCalendar />}
+          title={tab === 'PENDING' ? 'No pending extensions' : `No ${tab === 'ALL' ? '' : tab.toLowerCase() + ' '}extensions`}
+          description={tab === 'PENDING'
+            ? "You're all caught up — no extension requests need review."
+            : 'Extension requests will appear here as guests submit them.'}
+          {...(tab !== 'ALL' ? { actionLabel: 'View All', onAction: () => setTab('ALL') } : {})}
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -231,7 +250,7 @@ export default function AdminExtensionsPage() {
           title={confirmAction.type === 'approve' ? 'Approve Extension' : 'Reject Extension'}
           message={
             confirmAction.type === 'approve'
-              ? `Approve ${confirmAction.ext.booking.guest.firstName}'s extension on ${confirmAction.ext.booking.bookingRef} (+${confirmAction.ext.additionalNights} night${confirmAction.ext.additionalNights !== 1 ? 's' : ''})? The guest will be prompted to pay ${formatNaira(confirmAction.ext.additionalAmount)} (plus 10% tax) via Paystack.`
+              ? `Approve ${confirmAction.ext.booking.guest.firstName}'s extension on ${confirmAction.ext.booking.bookingRef} (+${confirmAction.ext.additionalNights} night${confirmAction.ext.additionalNights !== 1 ? 's' : ''})? The guest will be prompted to pay ${formatNaira(confirmAction.ext.additionalAmount)} (plus ${Math.round(TAX_RATE * 100)}% tax) via Paystack.`
               : `Reject ${confirmAction.ext.booking.guest.firstName}'s request to extend ${confirmAction.ext.booking.bookingRef} by ${confirmAction.ext.additionalNights} night${confirmAction.ext.additionalNights !== 1 ? 's' : ''}? The guest will be notified.`
           }
           confirmLabel={confirmAction.type === 'approve' ? 'Approve' : 'Reject'}
