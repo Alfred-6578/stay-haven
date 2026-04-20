@@ -132,7 +132,8 @@ export default function AdminBookingsPage() {
             <button
               key={t.key || 'all'}
               onClick={() => { setStatus(t.key); setPage(1) }}
-              className={`px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
+              disabled={loading}
+              className={`px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60 ${
                 active ? 'border-[#D97706] text-foreground' : 'border-transparent text-foreground-tertiary hover:text-foreground'
               }`}
             >

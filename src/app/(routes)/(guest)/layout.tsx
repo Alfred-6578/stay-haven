@@ -1,13 +1,21 @@
 'use client'
-import React from 'react'
+import React, { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import GuestSidebar from '@/component/layout/GuestSidebar'
 import NotificationBell from '@/component/guest/NotificationBell'
 import { useAuth } from '@/context/AuthContext'
 
 export default function GuestLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
+  const router = useRouter()
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login')
+    }
+  }, [loading, user, router])
+
+  if (loading || !user) {
     return (
       <div className="min-h-screen bg-foreground-inverse flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />

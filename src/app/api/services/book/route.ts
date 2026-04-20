@@ -122,12 +122,16 @@ export const POST = withAuth(
       });
 
       // Notify staff of the pending service request
-      notifyRoles(["STAFF", "MANAGER", "ADMIN"], {
-        title: "Service Request Pending",
-        message: `New ${service.name} request for ${dateStr} at ${timeStr} needs approval (${booking.bookingRef}).`,
-        type: "GENERAL",
-        bookingId,
-      }).catch((e) => console.error("notifyRoles (service) failed:", e));
+      try {
+        await notifyRoles(["STAFF", "MANAGER", "ADMIN"], {
+          title: "Service Request Pending",
+          message: `New ${service.name} request for ${dateStr} at ${timeStr} needs approval (${booking.bookingRef}).`,
+          type: "GENERAL",
+          bookingId,
+        });
+      } catch (e) {
+        console.error("notifyRoles (service) failed:", e);
+      }
 
       // Fire-and-forget email
       const guest = await prisma.user.findUnique({

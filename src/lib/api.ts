@@ -39,6 +39,10 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as RetriableConfig | undefined;
 
+    // /auth/me intentionally NOT in this list — we want the app-load
+    // "who am I" probe to also benefit from the refresh flow, otherwise
+    // an expired access token leaves the user stuck in a half-logged-in
+    // state (refresh cookie present, AuthContext.user = null).
     if (
       error.response?.status !== 401 ||
       !originalRequest ||
@@ -46,7 +50,6 @@ api.interceptors.response.use(
       originalRequest.url?.includes("/auth/refresh") ||
       originalRequest.url?.includes("/auth/login") ||
       originalRequest.url?.includes("/auth/register") ||
-      originalRequest.url?.includes("/auth/me") ||
       originalRequest.url?.includes("/auth/google")
     ) {
       return Promise.reject(error);
