@@ -1,6 +1,6 @@
 import LoginForm from '@/component/auth/LoginForm'
 import SideContent from '@/component/auth/SideContent'
-import React from 'react'
+import React, { Suspense } from 'react'
 
 const LoginPage = () => {
   return (
@@ -23,7 +23,7 @@ const LoginPage = () => {
                                 Classic Room
                             </h6>
                             <p className="text-[12px]">
-                                From ₦80,000 / night
+                                From ₦65,000 / night
                             </p>
                         </div>
                     </div>
@@ -36,7 +36,7 @@ const LoginPage = () => {
                                 Deluxe Suite
                             </h6>
                             <p className="text-[12px]">
-                                From ₦150,000 / night
+                                From ₦115,000 / night
                             </p>
                         </div>
                     </div>
@@ -44,7 +44,9 @@ const LoginPage = () => {
             </div>
         </SideContent>
         <div className="bg-background p-4 tny:p-6 sm:p-10 lg:p-12 flex items-center">
-            <LoginForm />
+            <Suspense fallback={<div className="w-full text-center text-foreground-secondary text-sm">Loading...</div>}>
+                <LoginForm />
+            </Suspense>
         </div>
     </div>
   )
