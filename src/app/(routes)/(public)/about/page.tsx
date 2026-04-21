@@ -72,7 +72,7 @@ export default function AboutPage() {
       {/* Hero */}
       <div ref={heroRef} className="relative h-140 bg-foreground rounded-b-3xl">
         <div className="absolute inset-0">
-          <Image src="/room_8.jpeg" alt="StayHaven" fill className="object-cover opacity-30" />
+          <Image src="/room_8.jpeg" alt="StayHaven" fill sizes="100vw" priority className="object-cover opacity-30" />
         </div>
         <div className="relative z-10 px-5 vsm:px-8 sm:px-12 lg:px-16 pt-16 vsm:pt-24 pb-20 vsm:pb-28">
           <div className={`flex items-start transition-all duration-700 ${vis.hero ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
@@ -134,13 +134,13 @@ export default function AboutPage() {
           <div className={`transition-all duration-700 delay-200 ${vis.story ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-6'}`}>
             <div className="grid grid-cols-2 gap-3">
               <div className="relative h-48 vsm:h-56 rounded-2xl overflow-hidden">
-                <Image src="/room_5.jpeg" alt="Interior" fill className="object-cover" />
+                <Image src="/room_5.jpeg" alt="Interior" fill sizes="(max-width: 1024px) 50vw, 25vw" loading="lazy" className="object-cover" />
               </div>
               <div className="relative h-48 vsm:h-56 rounded-2xl overflow-hidden mt-6">
-                <Image src="/room_7.jpeg" alt="Lounge" fill className="object-cover" />
+                <Image src="/room_7.jpeg" alt="Lounge" fill sizes="(max-width: 1024px) 50vw, 25vw" loading="lazy" className="object-cover" />
               </div>
               <div className="relative h-48 vsm:h-56 rounded-2xl overflow-hidden col-span-2">
-                <Image src="/room_9.jpeg" alt="Suite" fill className="object-cover" />
+                <Image src="/room_9.jpeg" alt="Suite" fill sizes="(max-width: 1024px) 100vw, 50vw" loading="lazy" className="object-cover" />
               </div>
             </div>
           </div>
@@ -195,7 +195,7 @@ export default function AboutPage() {
                 }}
               >
                 <div className="relative w-24 h-24 vsm:w-28 vsm:h-28 mx-auto rounded-full overflow-hidden mb-4 ring-2 ring-border ring-offset-2">
-                  <Image src={member.image} alt={member.name} fill className="object-cover" />
+                  <Image src={member.image} alt={member.name} fill sizes="112px" loading="lazy" className="object-cover" />
                 </div>
                 <h4 className="text-foreground font-semibold text-sm vsm:text-base">{member.name}</h4>
                 <p className="text-foreground-tertiary text-xs vsm:text-sm">{member.role}</p>

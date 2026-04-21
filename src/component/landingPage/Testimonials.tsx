@@ -95,6 +95,8 @@ const Testimonials = () => {
                 alt={`Gallery ${i + 1}`}
                 width={300}
                 height={200}
+                sizes="(max-width: 768px) 50vw, 25vw"
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
             </div>

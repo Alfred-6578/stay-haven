@@ -24,7 +24,11 @@ const Hero = () => {
             <Image
               src={heroImage}
               alt="StayHaven luxury hotel"
-              className="w-full h-full object-cover"
+              fill
+              sizes="100vw"
+              placeholder="blur"
+              quality={75}
+              className="object-cover"
               priority
             />
           </div>

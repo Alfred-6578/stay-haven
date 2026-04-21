@@ -105,7 +105,7 @@ export default function ServicesPage() {
       {/* Hero */}
       <div ref={heroRef} className="relative overflow-hidden bg-foreground rounded-b-3xl">
         <div className="absolute inset-0">
-          <Image src="/restaurant.jpeg" alt="Services" fill className="object-cover opacity-25" />
+          <Image src="/restaurant.jpeg" alt="Services" fill sizes="100vw" priority className="object-cover opacity-25" />
         </div>
         <div className="relative z-10 px-5 vsm:px-8 sm:px-12 lg:px-16 pt-16 vsm:pt-24 pb-20 vsm:pb-28 text-center">
           <div className={`flex justify-center transition-all duration-700 ${vis.hero ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
@@ -143,6 +143,8 @@ export default function ServicesPage() {
                     src={service.image}
                     alt={service.title}
                     fill
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    loading="lazy"
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-foreground/30 to-transparent" />

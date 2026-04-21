@@ -73,7 +73,7 @@ const Footer = () => {
                 transition: `opacity 1s ease-out ${0.3 + i * 0.15}s`,
               }}
             >
-              <Image src={img} alt="" width={200} height={160} className="w-full h-full object-cover" />
+              <Image src={img} alt="" width={200} height={160} sizes="(max-width: 640px) 96px, (max-width: 1024px) 128px, 160px" loading="lazy" className="w-full h-full object-cover" />
             </div>
           ))}
         </div>
