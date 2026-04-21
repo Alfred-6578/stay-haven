@@ -73,10 +73,12 @@ api.interceptors.response.use(
     } catch (refreshError) {
       processQueue(refreshError);
       if (typeof window !== "undefined") {
+        // Clear the auth context so logged-in UI flips to logged-out.
+        // Layout guards on protected routes (guest/staff/admin) will
+        // push to /login on their own — no need to hard-navigate from
+        // here, and doing so kicks users off public pages like the
+        // landing + browse-rooms when the "who am I" probe fails.
         window.dispatchEvent(new Event("auth:logout"));
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
-        }
       }
       return Promise.reject(refreshError);
     } finally {
