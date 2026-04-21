@@ -20,7 +20,18 @@ const RoomsHero = () => {
   return (
     <div ref={heroRef} className="relative min-h-88 vsm:h-120 bg-foreground rounded-b-3xl overflow-hidden">
       <div className="absolute inset-0">
-        <video src="/room_video.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover" />
+        {/* poster loads instantly; browser only fetches the 31MB video
+            when it decides to play — saves ~30MB on the critical path */}
+        <video
+          src="/room_video.mp4"
+          poster="/room_5.jpeg"
+          preload="metadata"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full h-full object-cover"
+        />
       </div>
       <div className="absolute inset-0 bg-foreground/70 z-10" />
 
