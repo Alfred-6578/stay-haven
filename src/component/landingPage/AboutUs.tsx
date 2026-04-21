@@ -67,6 +67,8 @@ const AboutUs = () => {
           src={card.image}
           alt={card.tag}
           fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 440px"
+          placeholder="blur"
           className='object-cover'
         />
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 to-transparent" />
