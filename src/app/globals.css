@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../../src";
 
 :root {
   --background: #ffffff;
@@ -6,10 +7,56 @@
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: #FFFFFF;
+  --color-background-secondary: #F7F7F7;
+  --color-background-tertiary: #F0F0F0;
+  --color-background-inverse: #111111;
+
+  /* foreground / text */
+  --color-foreground: #111111;
+  --color-foreground-secondary: #555555;
+  --color-foreground-tertiary: #999999;
+  --color-foreground-inverse: #FFFFFF;
+  --color-foreground-disabled: #CCCCCC;
+
+  /* borders */
+  --color-border: #E8E8E8;
+  --color-border-strong: #CCCCCC;
+  --color-border-inverse: #333333;
+
+  /* accent — the ONE color rule */
+  --color-accent: #111111;
+  --color-accent-hover: #333333;
+  --color-accent-foreground: #FFFFFF;
+
+  /* semantic — kept minimal */
+  --color-success: #2A7A45;
+  --color-success-bg: #F0F7F3;
+  --color-warning: #B45309;
+  --color-warning-bg: #FDF7EE;
+  --color-danger: #B91C1C;
+  --color-danger-bg: #FEF2F2;
+
+  /* loyalty tiers — only place color lives */
+  --color-bronze: #CD7F32;
+  --color-silver: #8C8C8C;
+  --color-gold: #C9A84C;
+  --color-platinum: #6366F1;
+
+  /* typography */
+  --font-heading: 'Playfair Display', serif;
+  --font-body: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* spacing & radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  --breakpoint-vsm: 550px;
+  --breakpoint-tny: 450px;
+  --breakpoint-xsm: 385px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +69,95 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Outfit', sans-serif;
 }
+
+/* ─── Hero entrance animations ─────────────────────── */
+
+@keyframes heroFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes heroScaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes heroKenBurns {
+  0% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-hero-ken-burns {
+  animation: heroKenBurns 12s ease-out forwards;
+}
+
+.animate-hero-fade-in {
+  opacity: 0;
+  animation: heroFadeIn 0.9s ease-out forwards;
+}
+
+.animate-hero-fade-up {
+  opacity: 0;
+  animation: heroFadeUp 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-hero-scale-in {
+  opacity: 0;
+  animation: heroScaleIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Modal / dialog animations */
+@keyframes modalBackdropIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes modalContentIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-modal-backdrop {
+  animation: modalBackdropIn 0.2s ease-out forwards;
+}
+
+.animate-modal-content {
+  animation: modalContentIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.hero-delay-1 { animation-delay: 0.1s; }
+.hero-delay-2 { animation-delay: 0.25s; }
+.hero-delay-3 { animation-delay: 0.4s; }
+.hero-delay-4 { animation-delay: 0.55s; }
+.hero-delay-5 { animation-delay: 0.7s; }
+.hero-delay-6 { animation-delay: 0.85s; }
+.hero-delay-7 { animation-delay: 1s; }
