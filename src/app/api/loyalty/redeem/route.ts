@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, AuthUser } from "@/lib/withAuth";
 import { successResponse, errorResponse } from "@/lib/response";
+import { POINTS_VALUE_NGN } from "@/lib/loyalty";
 
 export const POST = withAuth(
   async (request: NextRequest, _ctx, user: AuthUser) => {
@@ -38,8 +39,8 @@ export const POST = withAuth(
         return errorResponse("Can only redeem points on PENDING bookings", 422);
       }
 
-      // 100 pts = $10
-      let discount = (points / 100) * 10;
+      // 1 pt = ₦1 (see POINTS_VALUE_NGN in @/lib/loyalty)
+      let discount = points * POINTS_VALUE_NGN;
       const maxDiscount = Number(booking.totalAmount);
       if (discount > maxDiscount) {
         discount = maxDiscount;

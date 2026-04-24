@@ -128,8 +128,8 @@ const RoomInfo = ({
           {[
             { label: 'Type', value: name },
             { label: 'Max Guests', value: `${capacity} persons` },
-            { label: 'Base Rate', value: `$${basePrice.toFixed(0)}/night` },
-            ...(weekendMultiplier > 1 ? [{ label: 'Weekend Rate', value: `$${(basePrice * weekendMultiplier).toFixed(0)}/night` }] : []),
+            { label: 'Base Rate', value: `₦${basePrice.toLocaleString()}/night` },
+            ...(weekendMultiplier > 1 ? [{ label: 'Weekend Rate', value: `₦${(basePrice * weekendMultiplier).toLocaleString()}/night` }] : []),
             { label: 'Rooms', value: `${rooms.length} total` },
             { label: 'Available', value: `${availableCount} now` },
           ].map(({ label, value }) => (

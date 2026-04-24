@@ -145,7 +145,8 @@ export const POST = withAuth(
             email: bookings[0].guest.email,
             amount: amountInKobo,
             reference,
-            callback_url: `${process.env.CLIENT_URL}/book/confirmed?${groupRef ? `groupRef=${groupRef}` : `bookingId=${bookings[0].id}`}`,
+            // Popup callback — parent tab polls /payments/group/status; just close here.
+            callback_url: `${process.env.CLIENT_URL}/payment/close`,
             metadata: {
               type: "BOOKING_GROUP",
               groupRef,

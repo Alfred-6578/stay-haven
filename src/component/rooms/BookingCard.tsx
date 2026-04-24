@@ -52,12 +52,12 @@ const BookingCard = ({
           {/* Price header */}
           <div className="p-5 vsm:p-6 border-b border-border">
             <div className="flex items-baseline gap-1.5 mb-1">
-              <span className="text-foreground text-2xl vsm:text-3xl font-bold">${basePrice.toFixed(0)}</span>
+              <span className="text-foreground text-2xl vsm:text-3xl font-bold">₦{basePrice.toLocaleString()}</span>
               <span className="text-foreground-tertiary text-sm">/ night</span>
             </div>
             {weekendMultiplier > 1 && (
               <p className="text-warning text-xs">
-                Weekend: ${(basePrice * weekendMultiplier).toFixed(0)}/night
+                Weekend: ₦{(basePrice * weekendMultiplier).toLocaleString()}/night
               </p>
             )}
           </div>
@@ -130,7 +130,7 @@ const BookingCard = ({
                                 <p className="text-foreground-tertiary text-[11px]">Floor {ar.room.floor}</p>
                               </div>
                             </div>
-                            <p className="text-foreground font-semibold text-sm">${ar.totalAmount.toFixed(0)}</p>
+                            <p className="text-foreground font-semibold text-sm">₦{ar.totalAmount.toLocaleString()}</p>
                           </button>
                         )
                       })}
@@ -148,15 +148,15 @@ const BookingCard = ({
                 <div className="flex flex-col gap-1.5 text-sm">
                   <div className="flex justify-between text-foreground-secondary">
                     <span>Rooms × {selectedCount} · {nights} night{nights !== 1 ? 's' : ''}</span>
-                    <span>${combinedBase.toFixed(0)}</span>
+                    <span>₦{combinedBase.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-foreground-secondary">
                     <span>{TAX_LABEL}</span>
-                    <span>${combinedTax.toFixed(0)}</span>
+                    <span>₦{combinedTax.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-foreground font-bold text-base pt-2.5 mt-1 border-t border-border">
                     <span>Total</span>
-                    <span>${combinedTotal.toFixed(0)}</span>
+                    <span>₦{combinedTotal.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
