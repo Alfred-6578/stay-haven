@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StayHaven — Landing Page Replica</title>
+  <meta name="description" content="Premium rooms, exceptional service, and unforgettable experiences — all in one place." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* ══════════════════════════════════════════════════════════
+       DESIGN TOKENS (mirrors src/app/globals.css)
+       ══════════════════════════════════════════════════════════ */
+    :root {
+      --color-background: #FFFFFF;
+      --color-background-secondary: #F7F7F7;
+      --color-foreground: #111111;
+      --color-foreground-secondary: #555555;
+      --color-foreground-tertiary: #999999;
+      --color-foreground-inverse: #FFFFFF;
+      --color-foreground-disabled: #CCCCCC;
+      --color-border: #E8E8E8;
+      --color-border-strong: #CCCCCC;
+      --color-success: #2A7A45;
+      --font-heading: 'Playfair Display', serif;
+      --font-body: 'Outfit', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-body);
+      color: var(--color-foreground);
+      background: var(--color-foreground-inverse);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; border: 0; background: transparent; cursor: pointer; color: inherit; }
+    ul { list-style: none; }
+    img { display: block; max-width: 100%; }
+
+    .font-heading { font-family: var(--font-heading); }
+
+    /* ══════════════════════════════════════════════════════════
+       KEYFRAMES
+       ══════════════════════════════════════════════════════════ */
+    @keyframes heroFadeUp  { 0% { opacity: 0; transform: translateY(24px); } 100% { opacity: 1; transform: translateY(0); } }
+    @keyframes heroFadeIn  { 0% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes heroScaleIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
+    @keyframes heroKenBurns { 0% { transform: scale(1.15); } 100% { transform: scale(1); } }
+    @keyframes pulseDot    { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes slideFromLeft { 0% { opacity: 0; transform: translateX(-24px); } 100% { opacity: 1; transform: translateX(0); } }
+    @keyframes slideFromRight { 0% { opacity: 0; transform: translateX(24px); } 100% { opacity: 1; transform: translateX(0); } }
+    @keyframes skeletonPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes fadeUpInView { 0% { opacity: 0; transform: translateY(24px); } 100% { opacity: 1; transform: translateY(0); } }
+
+    .animate-fade-up  { opacity: 0; animation: heroFadeUp 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .animate-fade-in  { opacity: 0; animation: heroFadeIn 0.9s ease-out forwards; }
+    .animate-scale-in { opacity: 0; animation: heroScaleIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .delay-1 { animation-delay: 0.10s; }
+    .delay-2 { animation-delay: 0.25s; }
+    .delay-3 { animation-delay: 0.40s; }
+    .delay-4 { animation-delay: 0.55s; }
+    .delay-5 { animation-delay: 0.70s; }
+    .delay-6 { animation-delay: 0.85s; }
+    .delay-7 { animation-delay: 1.00s; }
+
+    /* Reveal on scroll — added by IntersectionObserver below */
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.8s cubic-bezier(0.22,1,0.36,1), transform 0.8s cubic-bezier(0.22,1,0.36,1); }
+    .reveal.in { opacity: 1; transform: translateY(0); }
+    .reveal.in-scale { opacity: 0; transform: translateY(24px) scale(0.95); }
+    .reveal.in-scale.in { opacity: 1; transform: translateY(0) scale(1); }
+    .reveal.from-left  { transform: translateX(-24px); }
+    .reveal.from-left.in  { transform: translateX(0); }
+    .reveal.from-right { transform: translateX(24px); }
+    .reveal.from-right.in { transform: translateX(0); }
+
+    /* ══════════════════════════════════════════════════════════
+       REUSABLE: Pill + Button
+       ══════════════════════════════════════════════════════════ */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      justify-content: center;
+      border: 1px solid var(--color-foreground-disabled);
+      color: var(--color-foreground);
+      font-size: 12px;
+      padding: 6px 16px;
+      border-radius: 999px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 999px;
+      font-weight: 500;
+      font-size: 15px;
+      padding: 6px 20px;
+      background: var(--color-foreground);
+      color: var(--color-foreground-inverse);
+      transition: background 0.15s ease, opacity 0.15s ease;
+    }
+    .btn:hover { background: rgba(17, 17, 17, 0.85); }
+    .btn--sm { font-size: 12px; padding: 4px 12px; }
+    .btn--outline { background: transparent; color: var(--color-foreground); border: 1px solid var(--color-foreground); }
+    .btn--outline:hover { background: var(--color-foreground); color: var(--color-foreground-inverse); }
+    .btn .arrow-wrap {
+      width: 24px; height: 24px; border-radius: 999px;
+      background: rgba(255,255,255,0.15);
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: transform 0.3s ease;
+    }
+    .btn:hover .arrow-wrap { transform: rotate(45deg); }
+
+    /* ══════════════════════════════════════════════════════════
+       NAVBAR
+       ══════════════════════════════════════════════════════════ */
+    .navbar {
+      padding: 16px;
+      background: var(--color-foreground-inverse);
+      position: relative;
+      z-index: 50;
+    }
+    @media (min-width: 550px) { .navbar { padding: 24px; } }
+
+    .navbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .navbar-logo { display: flex; align-items: center; gap: 8px; }
+    .navbar-logo img { width: 32px; height: 32px; border-radius: 4px; }
+    .navbar-logo b { font-size: 20px; font-weight: 700; color: var(--color-foreground); }
+
+    .navbar-links {
+      display: none;
+      gap: 20px;
+    }
+    @media (min-width: 1024px) { .navbar-links { display: flex; } }
+    .navbar-links a {
+      transition: text-decoration 0.15s ease;
+    }
+    .navbar-links a:hover { text-decoration: underline; }
+
+    .navbar-right { display: flex; align-items: center; gap: 12px; }
+    .navbar-right .btn--login { display: none; }
+    @media (min-width: 1024px) { .navbar-right .btn--login { display: inline-flex; } }
+
+    .navbar-hamburger {
+      border: 1px solid var(--color-foreground);
+      color: var(--color-foreground);
+      padding: 5px 12px;
+      border-radius: 24px;
+      font-size: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @media (min-width: 1024px) { .navbar-hamburger { display: none; } }
+
+    .navbar-mobile {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, margin-top 0.3s ease;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .navbar-mobile.open {
+      max-height: 500px;
+      margin-top: 20px;
+    }
+    @media (min-width: 1024px) { .navbar-mobile { display: none !important; } }
+
+    /* ══════════════════════════════════════════════════════════
+       PAGE SHELL
+       ══════════════════════════════════════════════════════════ */
+    .page-shell { background: var(--color-foreground-inverse); }
+    .page-inner { padding: 0 16px 40px; }
+    @media (min-width: 550px) { .page-inner { padding: 0 24px 40px; } }
+    .sections-wrap { padding: 0; }
+    @media (min-width: 768px) { .sections-wrap { padding: 0 16px; } }
+
+    /* ══════════════════════════════════════════════════════════
+       HERO
+       ══════════════════════════════════════════════════════════ */
+    .hero-wrapper { padding-bottom: 48px; }
+
+    .hero {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      min-height: 85vh;
+      display: flex;
+      align-items: center;
+    }
+
+    .hero-bg { position: absolute; inset: 0; overflow: hidden; }
+    .hero-bg-inner {
+      position: absolute; inset: 0;
+      animation: heroKenBurns 12s ease-out forwards;
+    }
+    .hero-bg-inner img { width: 100%; height: 100%; object-fit: cover; }
+    .hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(17,17,17,0.60), rgba(17,17,17,0.40), rgba(17,17,17,0.70));
+      opacity: 0;
+      animation: heroFadeIn 0.9s ease-out forwards;
+    }
+
+    .hero-content { position: relative; z-index: 10; width: 100%; padding: 48px 20px; }
+    @media (min-width: 550px) { .hero-content { padding: 64px 24px; } }
+    @media (min-width: 640px) { .hero-content { padding: 64px 40px; } }
+    @media (min-width: 1024px) { .hero-content { padding: 64px 64px; } }
+
+    .hero-inner { max-width: 768px; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.10);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.20);
+      border-radius: 999px;
+      padding: 6px 16px;
+      margin-bottom: 24px;
+    }
+    .badge-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--color-success); animation: pulseDot 2s ease-in-out infinite; }
+    .badge-text { color: rgba(255,255,255,0.90); font-size: 10px; font-weight: 500; letter-spacing: 0.02em; }
+    @media (min-width: 385px) { .badge-text { font-size: 12px; } }
+    @media (min-width: 640px) { .badge-text { font-size: 14px; } }
+
+    .hero-heading { font-family: var(--font-heading); font-weight: 700; font-style: italic; color: #fff; font-size: 36px; line-height: 1.15; margin-bottom: 20px; }
+    @media (min-width: 640px) { .hero-heading { font-size: 48px; } }
+    @media (min-width: 1024px) { .hero-heading { font-size: 60px; } }
+
+    .hero-subtext { color: rgba(255,255,255,0.75); font-size: 16px; line-height: 1.7; max-width: 512px; margin-bottom: 24px; }
+    @media (min-width: 550px) { .hero-subtext { margin-bottom: 40px; } }
+    @media (min-width: 640px) { .hero-subtext { font-size: 18px; } }
+
+    .stats { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+    @media (min-width: 450px) { .stats { gap: 24px; } }
+    @media (min-width: 640px) { .stats { gap: 32px; } }
+    @media (min-width: 550px) { .stats { margin-bottom: 40px; } }
+
+    .stat p:first-child { color: #fff; font-size: 24px; font-weight: 700; line-height: 1.1; }
+    @media (min-width: 640px) { .stat p:first-child { font-size: 30px; } }
+    .stat p:last-child { color: rgba(255,255,255,0.60); font-size: 12px; }
+    @media (min-width: 640px) { .stat p:last-child { font-size: 14px; } }
+    .stat-divider { width: 1px; height: 40px; background: rgba(255,255,255,0.20); }
+
+    /* Search bar */
+    .search-bar { background: #fff; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); max-width: 896px; overflow: hidden; }
+    @media (min-width: 640px) { .search-bar { border-radius: 16px; } }
+    .search-mobile-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 14px 16px; }
+    @media (min-width: 640px) { .search-mobile-toggle { display: none; } }
+    .search-mobile-toggle-left { display: flex; align-items: center; gap: 10px; color: var(--color-foreground-secondary); }
+    .search-mobile-toggle-left span { font-size: 14px; font-weight: 500; }
+    .chevron { transition: transform 0.2s ease; color: var(--color-foreground-tertiary); }
+    .search-mobile-toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+    .search-mobile-fields { display: none; padding: 12px 16px 16px; border-top: 1px solid var(--color-border); }
+    @media (max-width: 639px) {
+      .search-mobile-toggle[aria-expanded="true"] + .search-mobile-fields { display: flex; flex-direction: column; gap: 12px; }
+    }
+    @media (min-width: 640px) { .search-mobile-fields { display: none !important; } }
+    .search-desktop { display: none; padding: 24px; }
+    @media (min-width: 640px) { .search-desktop { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } }
+    @media (min-width: 1024px) { .search-desktop { grid-template-columns: repeat(5, 1fr); } }
+
+    .field-col { display: flex; flex-direction: column; gap: 6px; }
+    .field-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 449px) { .field-row-2 { grid-template-columns: 1fr; } }
+    .field-label { color: var(--color-foreground-tertiary); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .field-input { display: flex; align-items: center; gap: 8px; border: 1px solid var(--color-border); border-radius: 8px; padding: 10px 12px; transition: box-shadow 0.15s ease; }
+    .field-input:focus-within { box-shadow: 0 0 0 2px rgba(17,17,17,0.2); }
+    .field-icon { color: var(--color-border-strong); flex-shrink: 0; }
+    .field-input input, .field-input select { width: 100%; border: 0; outline: 0; background: transparent; font-family: var(--font-body); font-size: 14px; color: var(--color-foreground); appearance: none; cursor: pointer; }
+    .search-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--color-foreground); color: var(--color-foreground-inverse); padding: 10px 24px; height: 42px; border-radius: 8px; font-weight: 500; font-size: 14px; border: 0; cursor: pointer; transition: background 0.15s ease; }
+    .search-btn:hover { background: rgba(17,17,17,0.9); }
+    .search-btn-mobile { width: 100%; padding: 10px 0; margin-top: 4px; }
+    .search-btn-desktop-wrapper { display: flex; flex-direction: column; justify-content: flex-end; }
+
+    /* ══════════════════════════════════════════════════════════
+       ABOUT US
+       ══════════════════════════════════════════════════════════ */
+    .about { width: 100%; padding: 24px 0 40px; }
+
+    .about-head { display: flex; flex-direction: column; align-items: center; }
+
+    .section-heading {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 32px;
+      line-height: 1.25;
+      color: var(--color-foreground-disabled);
+      text-align: center;
+      margin-top: 16px;
+      max-width: 768px;
+    }
+    @media (min-width: 550px) { .section-heading { font-size: 40px; line-height: 1.3; } }
+    @media (min-width: 640px) { .section-heading { font-size: 48px; } }
+
+    .about-body {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      margin-top: 40px;
+    }
+    @media (min-width: 1024px) {
+      .about-body { flex-direction: row; justify-content: space-between; gap: 16px; margin-top: 68px; }
+    }
+
+    .about-left { max-width: 384px; flex: 1 1 auto; }
+    .about-tag {
+      display: flex; justify-content: center; align-items: center;
+      width: 88px;
+      border: 1px solid var(--color-foreground-disabled);
+      font-size: 14px; padding: 6px 0; color: var(--color-foreground);
+      border-radius: 999px;
+    }
+    .about-tag-heading { font-size: 20px; max-width: 448px; color: var(--color-foreground); margin-top: 16px; }
+    @media (min-width: 550px) { .about-tag-heading { font-size: 24px; } }
+    @media (min-width: 1024px) { .about-tag-heading { max-width: 448px; } }
+
+    .about-right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .about-cards { display: flex; flex-direction: column; gap: 16px; }
+    @media (min-width: 640px) { .about-cards { flex-direction: row; } }
+
+    /* Card — animated resize */
+    .about-card { transition: all 0.5s ease-in-out; }
+    .about-card--normal { }
+    .about-card--small { padding-top: 0; }
+    @media (min-width: 640px) {
+      .about-card--normal { width: 55%; }
+      .about-card--small  { width: 45%; padding-top: 32px; }
+    }
+    @media (min-width: 1280px) {
+      .about-card--normal { width: 440px; }
+      .about-card--small  { width: 360px; }
+    }
+
+    .about-card-inner {
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      transition: all 0.5s ease-in-out;
+      width: 100%;
+      height: 256px;
+    }
+    @media (min-width: 550px) { .about-card--normal .about-card-inner { height: 288px; } }
+    .about-card--small .about-card-inner { height: 176px; }
+    @media (min-width: 550px) { .about-card--small .about-card-inner { height: 208px; } }
+
+    .about-card-inner img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .about-card-gradient { position: absolute; inset: 0; background: linear-gradient(to top, rgba(17,17,17,0.5), transparent); }
+
+    .about-card-content {
+      position: relative;
+      z-index: 2;
+      display: flex; flex-direction: column; justify-content: space-between;
+      height: 100%;
+      padding: 12px;
+    }
+
+    .about-card-tag {
+      border: 1px solid rgba(255,255,255,0.6);
+      color: rgba(255,255,255,0.8);
+      font-size: 13px;
+      padding: 2px 12px;
+      border-radius: 999px;
+      width: fit-content;
+    }
+
+    .about-card-title-wrap {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 48px;
+      transition: all 0.5s ease;
+    }
+    .about-card--small .about-card-title-wrap { opacity: 0; max-height: 0; overflow: hidden; padding-top: 0; }
+
+    .about-card-title { color: #fff; font-size: 16px; max-width: 272px; line-height: 1.25; }
+    @media (min-width: 550px) { .about-card-title { font-size: 18px; line-height: 1.5; } }
+
+    .about-card-footer { display: flex; justify-content: space-between; align-items: flex-end; }
+    .about-card-location {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--color-foreground-disabled);
+      height: 36px;
+      padding: 0 6px;
+      border-radius: 999px;
+      font-size: 14px;
+      color: var(--color-foreground);
+    }
+    .about-card-location-pin {
+      padding: 6px; border-radius: 999px;
+      background: rgba(255,255,255,0.6);
+      color: var(--color-foreground);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .about-card-location p { font-size: 12px; padding-right: 8px; }
+
+    .about-card-arrow {
+      background: #fff;
+      border-radius: 999px;
+      padding: 10px;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .about-card-arrow:hover { transform: rotate(90deg); }
+
+    .about-card-description {
+      transition: all 0.5s ease;
+      overflow: hidden;
+      max-height: 0; opacity: 0;
+    }
+    .about-card--small .about-card-description {
+      max-height: 160px; opacity: 1; margin-top: 16px;
+    }
+    .about-card-description p {
+      max-width: 260px;
+      font-size: 14px;
+      color: rgba(17,17,17,0.7);
+    }
+
+    .about-controls { display: flex; justify-content: flex-end; gap: 12px; }
+    .control-btn {
+      border: 1px solid var(--color-foreground);
+      border-radius: 999px;
+      padding: 10px;
+      color: var(--color-foreground);
+      transition: background 0.15s ease, color 0.15s ease;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    @media (min-width: 550px) { .control-btn { padding: 12px; } }
+    .control-btn:hover { background: var(--color-foreground); color: var(--color-foreground-inverse); }
+    .control-btn--active { background: var(--color-foreground); color: var(--color-foreground-inverse); }
+
+    /* ══════════════════════════════════════════════════════════
+       FACILITIES
+       ══════════════════════════════════════════════════════════ */
+    .facilities {
+      background: rgba(204,204,204,0.30);
+      width: 100%;
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 80px;
+    }
+    @media (min-width: 550px) { .facilities { padding: 24px; } }
+    @media (min-width: 1024px) { .facilities { padding: 32px; } }
+
+    .facilities-head { display: flex; justify-content: space-between; align-items: flex-start; }
+    .facilities-head-left { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+    .facilities-title { color: var(--color-foreground); font-size: 20px; }
+    @media (min-width: 550px) { .facilities-title { font-size: 24px; } }
+    .facilities-head-right { display: none; }
+    @media (min-width: 550px) { .facilities-head-right { display: flex; align-items: flex-start; } }
+
+    .facilities-slider {
+      display: flex;
+      gap: 24px;
+      margin-top: 32px;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .facilities-slider::-webkit-scrollbar { display: none; }
+
+    .room-card-outer {
+      min-width: 260px;
+      flex-shrink: 0;
+    }
+    @media (min-width: 550px) { .room-card-outer { min-width: 280px; } }
+    @media (min-width: 640px) { .room-card-outer { min-width: 300px; } }
+
+    /* RoomTypeCard */
+    .room-card {
+      display: block;
+      width: 100%;
+      height: 340px;
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+    }
+    .room-card img {
+      position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+    .room-card:hover img { transform: scale(1.05); }
+    .room-card-gradient { position: absolute; inset: 0; background: linear-gradient(to top, rgba(17,17,17,0.5), transparent, transparent); }
+    .room-card-content {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; justify-content: space-between;
+      height: 100%;
+      padding: 16px;
+    }
+    .room-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .heart-btn {
+      padding: 12px; border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      color: #fff;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .pill-inverse {
+      border: 1px solid rgba(255,255,255,0.6);
+      color: #fff;
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      display: inline-flex; align-items: center;
+    }
+    .room-card-bottom {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      background: rgba(255,255,255,0.30);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .room-card-info { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+    .room-card-info h3 { color: #fff; font-size: 20px; margin-bottom: 20px; font-weight: 600; }
+    .arrow-round {
+      background: #fff; color: var(--color-foreground);
+      padding: 12px; border-radius: 999px;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+
+    .facilities-footer {
+      margin-top: 32px;
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    @media (min-width: 550px) { .facilities-footer { margin-top: 40px; } }
+    .facilities-footer-text {
+      display: none;
+      font-size: 12px;
+      text-align: right;
+      color: rgba(17,17,17,0.8);
+      max-width: 280px;
+    }
+    @media (min-width: 550px) { .facilities-footer-text { display: block; } }
+    .facilities-footer-mobile { display: block; }
+    @media (min-width: 550px) { .facilities-footer-mobile { display: none; } }
+
+    /* ══════════════════════════════════════════════════════════
+       SERVICES (accordion)
+       ══════════════════════════════════════════════════════════ */
+    .services { margin-top: 104px; }
+
+    .services-head { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .services-description {
+      color: rgba(204,204,204,0.8);
+      text-align: center;
+      margin: 16px 0;
+      max-width: 672px;
+      font-size: 14px;
+    }
+    @media (min-width: 550px) { .services-description { font-size: 16px; } }
+
+    .services-grid {
+      display: none;
+      gap: 12px;
+      margin-top: 40px;
+    }
+    @media (min-width: 640px) { .services-grid { display: flex; } }
+
+    .service-card {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: flex 0.5s ease-in-out;
+      height: 400px;
+      flex: 1;
+    }
+    @media (min-width: 550px) { .service-card { height: 450px; } }
+    @media (min-width: 640px) { .service-card { height: 500px; } }
+    .service-card.active { flex: 2.5; }
+
+    .service-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+    .service-card-gradient { position: absolute; inset: 0; background: linear-gradient(to top, rgba(17,17,17,0.7), rgba(17,17,17,0.20), transparent); }
+
+    .service-card-collapsed {
+      position: absolute; inset: 0 auto 0 12px; height: 100%;
+      display: flex; align-items: flex-end; padding: 16px;
+      opacity: 1; transition: opacity 0.4s ease;
+    }
+    .service-card.active .service-card-collapsed { opacity: 0; pointer-events: none; }
+    .service-card-collapsed-inner {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+    }
+    .service-card-collapsed-inner p { color: rgba(255,255,255,0.7); font-size: 12px; margin-bottom: 4px; }
+    .service-card-collapsed-inner h3 { color: #fff; font-size: 18px; font-weight: 600; line-height: 1.25; }
+
+    .service-card-expanded {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      padding: 20px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    @media (min-width: 550px) { .service-card-expanded { padding: 24px; } }
+    .service-card.active .service-card-expanded { opacity: 1; pointer-events: auto; }
+    .service-card-expanded p.tag { color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+    .service-card-expanded h3 { color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    @media (min-width: 550px) { .service-card-expanded h3 { font-size: 24px; } }
+    .service-card-expanded p.desc { color: rgba(255,255,255,0.8); font-size: 14px; line-height: 1.6; max-width: 448px; }
+
+    .services-mobile { margin-top: 32px; }
+    @media (min-width: 640px) { .services-mobile { display: none; } }
+    .services-mobile-card {
+      overflow: hidden; border-radius: 16px; position: relative; height: 400px;
+    }
+    .services-dots { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+    .services-dot {
+      height: 6px; border-radius: 999px;
+      transition: width 0.3s ease, background 0.3s ease;
+      width: 6px; background: var(--color-foreground-disabled);
+    }
+    .services-dot.active { width: 24px; background: var(--color-foreground); }
+    .services-mobile-more { display: flex; justify-content: center; margin-top: 24px; }
+
+    /* ══════════════════════════════════════════════════════════
+       TESTIMONIALS
+       ══════════════════════════════════════════════════════════ */
+    .testimonials { margin-top: 80px; }
+    @media (min-width: 550px) { .testimonials { margin-top: 112px; } }
+
+    .testimonials-stage { position: relative; }
+
+    .testimonials-gallery {
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    @media (min-width: 768px) { .testimonials-gallery { display: grid; } }
+
+    .testimonials-gallery img { width: 100%; height: 100%; object-fit: cover; }
+    .gallery-cell {
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .gallery-cell--0, .gallery-cell--3, .gallery-cell--6 { height: 128px; }
+    .gallery-cell--1, .gallery-cell--4, .gallery-cell--7 { height: 160px; }
+    .gallery-cell--2, .gallery-cell--5 { height: 144px; }
+    .gallery-cell--4, .gallery-cell--5, .gallery-cell--6, .gallery-cell--7 { margin-top: -20px; }
+
+    .testimonial-card-wrap {
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 32px;
+    }
+    @media (min-width: 768px) {
+      .testimonial-card-wrap { position: absolute; inset: 0; margin-top: 0; }
+    }
+
+    .testimonial-card {
+      background: var(--color-foreground-inverse);
+      border-radius: 999px;
+      width: 90vw;
+      max-width: 512px;
+      aspect-ratio: 1/1;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+      border: 1px solid var(--color-border);
+    }
+    @media (min-width: 550px) { .testimonial-card { padding: 48px; } }
+
+    .testimonial-quote-icon { color: var(--color-foreground-disabled); font-size: 24px; margin-bottom: 8px; }
+    .testimonial-quote {
+      color: var(--color-foreground);
+      font-size: 12px;
+      line-height: 1.6;
+      max-width: 320px;
+      transition: opacity 0.5s ease;
+    }
+    @media (min-width: 550px) { .testimonial-quote { font-size: 14px; } }
+
+    .testimonial-author { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 24px; }
+    .testimonial-author img { width: 40px; height: 40px; border-radius: 999px; object-fit: cover; }
+    .testimonial-author .name { color: var(--color-foreground); font-size: 14px; font-weight: 600; }
+    .testimonial-author .role { color: var(--color-foreground-tertiary); font-size: 12px; }
+
+    .testimonial-dots { display: flex; gap: 6px; margin-top: 16px; }
+    .testimonial-dot {
+      height: 6px; border-radius: 999px;
+      transition: width 0.3s ease, background 0.3s ease;
+      width: 6px; background: var(--color-foreground-disabled);
+    }
+    .testimonial-dot.active { width: 20px; background: var(--color-foreground); }
+
+    .testimonial-controls { display: flex; justify-content: center; gap: 12px; margin-top: 24px; }
+    .testimonial-controls .control-btn--active { background: var(--color-foreground); color: var(--color-foreground-inverse); }
+    .testimonial-controls .control-btn--active:hover { background: rgba(17,17,17,0.8); }
+
+    /* ══════════════════════════════════════════════════════════
+       PROMOS
+       ══════════════════════════════════════════════════════════ */
+    .promos { margin-top: 80px; }
+    @media (min-width: 550px) { .promos { margin-top: 112px; } }
+
+    .promos-head { display: flex; flex-direction: column; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+    .promos-head-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .promos-heading {
+      font-family: var(--font-heading); font-weight: 700;
+      font-size: 32px;
+      text-align: center;
+      color: var(--color-foreground-disabled);
+      margin-top: 12px;
+    }
+    @media (min-width: 550px) { .promos-heading { font-size: 40px; } }
+    @media (min-width: 640px) { .promos-heading { font-size: 48px; } }
+    .promos-subtitle {
+      color: var(--color-foreground-tertiary); margin-top: 12px;
+      text-align: center; max-width: 448px;
+      font-size: 14px;
+    }
+    @media (min-width: 550px) { .promos-subtitle { font-size: 16px; } }
+    .promos-see-all-desktop { margin-top: 16px; display: none; }
+    @media (min-width: 640px) { .promos-see-all-desktop { display: block; } }
+
+    .promos-grid {
+      display: grid; grid-template-columns: 1fr; gap: 16px;
+    }
+    @media (min-width: 550px) { .promos-grid { gap: 20px; } }
+    @media (min-width: 640px) { .promos-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1024px) { .promos-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .promo-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px;
+      padding: 20px;
+      min-height: 240px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    @media (min-width: 550px) { .promo-card { padding: 28px; min-height: 260px; } }
+    .promo-card--blue { background: linear-gradient(to bottom right, #0B1B3A, #1a3060); }
+    .promo-card--night { background: linear-gradient(to bottom right, #1a1a2e, #16213e); }
+    .promo-card--amber { background: linear-gradient(to bottom right, #2d1b00, #4a2c00); }
+
+    .promo-circle-1 { position: absolute; right: -32px; top: -32px; width: 128px; height: 128px; border-radius: 999px; background: rgba(255,255,255,0.05); }
+    .promo-circle-2 { position: absolute; right: -16px; bottom: -40px; width: 96px; height: 96px; border-radius: 999px; background: rgba(255,255,255,0.05); }
+
+    .promo-top { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; }
+    .promo-badge { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; color: var(--color-foreground); }
+    .promo-badge--amber { background: #fbbf24; }
+    .promo-badge--emerald { background: #34d399; }
+    .promo-badge--yellow { background: #facc15; }
+    .promo-discount { display: flex; flex-direction: column; align-items: flex-end; }
+    .promo-discount span:nth-child(1) { color: rgba(255,255,255,0.5); font-size: 12px; }
+    .promo-discount span:nth-child(2) { color: #fff; font-size: 40px; font-weight: 700; line-height: 1; }
+    @media (min-width: 550px) { .promo-discount span:nth-child(2) { font-size: 48px; } }
+    .promo-discount span:nth-child(3) { color: rgba(255,255,255,0.6); font-size: 12px; }
+
+    .promo-content { position: relative; z-index: 1; margin-top: 16px; }
+    .promo-content h3 { color: #fff; font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    @media (min-width: 550px) { .promo-content h3 { font-size: 20px; } }
+    .promo-content p.desc { color: rgba(255,255,255,0.7); font-size: 12px; line-height: 1.6; margin-bottom: 12px; }
+    @media (min-width: 550px) { .promo-content p.desc { font-size: 14px; } }
+    .promo-content p.terms { color: rgba(255,255,255,0.4); font-size: 10px; }
+    @media (min-width: 550px) { .promo-content p.terms { font-size: 12px; } }
+
+    .promos-see-all-mobile { display: flex; justify-content: center; margin-top: 24px; }
+    @media (min-width: 640px) { .promos-see-all-mobile { display: none; } }
+
+    /* ══════════════════════════════════════════════════════════
+       FOOTER
+       ══════════════════════════════════════════════════════════ */
+    .footer {
+      background: var(--color-foreground);
+      color: var(--color-foreground-inverse);
+      margin-top: 80px;
+      border-radius: 24px 24px 0 0;
+      overflow: hidden;
+    }
+    @media (min-width: 550px) { .footer { margin-top: 112px; } }
+
+    .footer-big { position: relative; overflow: hidden; }
+    .footer-big-bg {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 32px;
+      opacity: 0.2;
+    }
+    .footer-big-bg .bg-cell {
+      border-radius: 12px;
+      overflow: hidden;
+      width: 96px;
+    }
+    @media (min-width: 550px) { .footer-big-bg .bg-cell { width: 128px; } }
+    @media (min-width: 640px) { .footer-big-bg .bg-cell { width: 160px; } }
+    .footer-big-bg .bg-cell img { width: 100%; height: 100%; object-fit: cover; }
+    .footer-big-bg .bg-cell:nth-child(odd) { height: 112px; transform: rotate(-6deg); }
+    .footer-big-bg .bg-cell:nth-child(even) { height: 96px; transform: rotate(6deg); margin-top: 32px; }
+    @media (min-width: 550px) {
+      .footer-big-bg .bg-cell:nth-child(odd) { height: 144px; }
+      .footer-big-bg .bg-cell:nth-child(even) { height: 128px; }
+    }
+
+    .footer-big-text {
+      position: relative; z-index: 1;
+      padding: 48px 24px;
+      text-align: center;
+    }
+    @media (min-width: 550px) { .footer-big-text { padding: 64px 24px; } }
+    @media (min-width: 640px) { .footer-big-text { padding: 80px 24px; } }
+    .footer-big-text h2 {
+      font-family: var(--font-heading); font-weight: 700;
+      font-size: 36px;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      color: rgba(255,255,255,0.1);
+    }
+    @media (min-width: 550px) { .footer-big-text h2 { font-size: 60px; } }
+    @media (min-width: 640px) { .footer-big-text h2 { font-size: 72px; } }
+    @media (min-width: 1024px) { .footer-big-text h2 { font-size: 96px; } }
+    @media (min-width: 1280px) { .footer-big-text h2 { font-size: 128px; } }
+
+    .footer-big-text h2 span { color: rgba(255,255,255,0.3); }
+
+    .footer-links {
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding: 40px 24px;
+    }
+    @media (min-width: 550px) { .footer-links { padding: 48px 32px; } }
+    @media (min-width: 1024px) { .footer-links { padding: 48px 48px; } }
+
+    .footer-links-row {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 40px;
+    }
+    @media (min-width: 640px) { .footer-links-row { flex-direction: row; gap: 64px; } }
+    @media (min-width: 1024px) { .footer-links-row { gap: 96px; } }
+
+    .footer-group h4 {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 14px; font-weight: 600;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+    .footer-group ul { display: flex; flex-direction: column; gap: 10px; }
+    .footer-group a {
+      color: rgba(255,255,255,0.5); font-size: 14px;
+      transition: color 0.15s ease;
+    }
+    .footer-group a:hover { color: #fff; }
+
+    .footer-quote {
+      max-width: 512px; margin: 40px auto 0; text-align: center;
+    }
+    @media (min-width: 550px) { .footer-quote { margin-top: 48px; } }
+    .footer-quote p {
+      color: rgba(255,255,255,0.5);
+      font-size: 12px;
+      line-height: 1.6;
+      font-style: italic;
+    }
+    @media (min-width: 550px) { .footer-quote p { font-size: 14px; } }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding: 20px 24px;
+    }
+    @media (min-width: 550px) { .footer-bottom { padding: 24px 32px; } }
+    @media (min-width: 1024px) { .footer-bottom { padding: 24px 48px; } }
+
+    .footer-bottom-inner {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: space-between; gap: 16px;
+    }
+    @media (min-width: 550px) { .footer-bottom-inner { flex-direction: row; } }
+
+    .footer-bottom-left { display: flex; align-items: center; gap: 16px; }
+    .footer-bottom-logo { display: flex; align-items: center; gap: 8px; }
+    .footer-bottom-logo img { width: 24px; height: 24px; border-radius: 4px; }
+    .footer-bottom-logo span { color: #fff; font-size: 14px; font-weight: 600; }
+    .footer-divider { color: rgba(255,255,255,0.4); font-size: 12px; display: none; }
+    @media (min-width: 640px) { .footer-divider { display: inline; } }
+    .footer-helpline { color: rgba(255,255,255,0.4); font-size: 12px; display: none; }
+    @media (min-width: 640px) { .footer-helpline { display: inline; } }
+
+    .footer-socials { display: flex; align-items: center; gap: 12px; }
+    .footer-social {
+      width: 32px; height: 32px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.2);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,0.5);
+      transition: color 0.15s ease, border-color 0.15s ease;
+    }
+    .footer-social:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
+
+    .footer-copy { color: rgba(255,255,255,0.3); font-size: 12px; }
+  </style>
+</head>
+
+<body>
+  <div class="page-shell">
+    <!-- ═════════════════════════════════════════════════════════
+         NAVBAR
+         ═════════════════════════════════════════════════════════ -->
+    <nav class="navbar">
+      <div class="navbar-inner">
+        <a href="#" class="navbar-logo animate-fade-in delay-1">
+          <img src="src/assets/logo.png" alt="StayHaven" />
+          <b>StayHaven</b>
+        </a>
+        <div class="navbar-links">
+          <a href="#" class="animate-fade-up" style="animation-delay: 0.15s;">Home</a>
+          <a href="#facilities" class="animate-fade-up" style="animation-delay: 0.22s;">Rooms</a>
+          <a href="#about" class="animate-fade-up" style="animation-delay: 0.29s;">About Us</a>
+          <a href="#services" class="animate-fade-up" style="animation-delay: 0.36s;">Services</a>
+        </div>
+        <div class="navbar-right">
+          <a href="#" class="btn btn--outline btn--login animate-fade-in delay-3">Login</a>
+          <a href="#" class="btn animate-scale-in delay-3">
+            Book Now
+            <span class="arrow-wrap">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </span>
+          </a>
+          <button class="navbar-hamburger animate-fade-in delay-2" id="mobileNavToggle" aria-label="Menu">☰</button>
+        </div>
+      </div>
+      <div class="navbar-mobile" id="mobileNav">
+        <a href="#">Home</a>
+        <a href="#facilities">Rooms</a>
+        <a href="#about">About Us</a>
+        <a href="#services">Services</a>
+        <a href="#" class="btn btn--outline" style="margin-top: 8px;">Login</a>
+      </div>
+    </nav>
+
+    <div class="page-inner">
+      <!-- ═════════════════════════════════════════════════════════
+           HERO
+           ═════════════════════════════════════════════════════════ -->
+      <section class="hero-wrapper">
+        <div class="hero">
+          <div class="hero-bg">
+            <div class="hero-bg-inner">
+              <img src="src/assets/hero-image.jpg" alt="StayHaven luxury hotel" />
+            </div>
+            <div class="hero-overlay"></div>
+          </div>
+          <div class="hero-content">
+            <div class="hero-inner">
+              <div class="badge animate-scale-in delay-1">
+                <span class="badge-dot"></span>
+                <span class="badge-text">12,000+ guests served across Nigeria</span>
+              </div>
+              <h1 class="hero-heading animate-fade-up delay-2">
+                Your perfect stay<br />is one click away.
+              </h1>
+              <p class="hero-subtext animate-fade-up delay-3">
+                Premium rooms, exceptional service, and unforgettable experiences — all in one place. Discover why StayHaven is Nigeria's most trusted hotel.
+              </p>
+              <div class="stats">
+                <div class="stat animate-fade-up delay-4">
+                  <p>4.9</p>
+                  <p>Guest Rating</p>
+                </div>
+                <div class="stat-divider animate-fade-in delay-5"></div>
+                <div class="stat animate-fade-up delay-5">
+                  <p>3</p>
+                  <p>Room Types</p>
+                </div>
+                <div class="stat-divider animate-fade-in delay-6"></div>
+                <div class="stat animate-fade-up delay-6">
+                  <p>24/7</p>
+                  <p>Concierge</p>
+                </div>
+              </div>
+            </div>
+            <div class="search-bar animate-scale-in delay-7">
+              <button class="search-mobile-toggle" id="mobileToggle" aria-expanded="false">
+                <div class="search-mobile-toggle-left">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <span>When are you staying?</span>
+                </div>
+                <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div class="search-mobile-fields">
+                <div class="field-row-2">
+                  <div class="field-col"><label class="field-label">Check In</label><div class="field-input"><input type="date" /></div></div>
+                  <div class="field-col"><label class="field-label">Check Out</label><div class="field-input"><input type="date" /></div></div>
+                </div>
+                <div class="field-row-2">
+                  <div class="field-col"><label class="field-label">Type</label><div class="field-input"><select><option>All Types</option><option>Standard</option><option>Deluxe</option></select></div></div>
+                  <div class="field-col"><label class="field-label">Guests</label><div class="field-input"><select><option>1 Guest</option><option>2 Guests</option><option>3 Guests</option></select></div></div>
+                </div>
+                <a href="#" class="search-btn search-btn-mobile">Search Rooms</a>
+              </div>
+              <div class="search-desktop">
+                <div class="field-col"><label class="field-label">Check In</label><div class="field-input"><svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><input type="date" /></div></div>
+                <div class="field-col"><label class="field-label">Check Out</label><div class="field-input"><svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><input type="date" /></div></div>
+                <div class="field-col"><label class="field-label">Room Type</label><div class="field-input"><svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12v5a2 2 0 002 2h16a2 2 0 002-2v-5"></path><path d="M2 12V7a2 2 0 012-2h2l2-2h8l2 2h2a2 2 0 012 2v5"></path></svg><select><option>All Types</option><option>Standard</option><option>Deluxe</option><option>Presidential Suite</option></select></div></div>
+                <div class="field-col"><label class="field-label">Guests</label><div class="field-input"><svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg><select><option>1 Guest</option><option>2 Guests</option><option>3 Guests</option><option>4 Guests</option></select></div></div>
+                <div class="search-btn-desktop-wrapper">
+                  <a href="#" class="search-btn">Search →</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="sections-wrap">
+        <!-- ═════════════════════════════════════════════════════════
+             ABOUT US
+             ═════════════════════════════════════════════════════════ -->
+        <section class="about" id="about">
+          <div class="about-head">
+            <div class="pill reveal">Let's Know Us <span>↗</span></div>
+            <h1 class="section-heading font-heading reveal">Explore Premium Comfort, Your Stay - Our Priority</h1>
+          </div>
+          <div class="about-body">
+            <div class="about-left">
+              <div class="about-tag reveal from-left">About Us</div>
+              <h3 class="about-tag-heading reveal from-left">
+                StayHaven offers diverse accommodations with user-friendly booking and personalized recommendations.
+              </h3>
+              <div class="reveal">
+                <a href="#" class="btn" style="margin-top: 36px;">
+                  Explore More
+                  <span class="arrow-wrap">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                  </span>
+                </a>
+              </div>
+            </div>
+            <div class="about-right">
+              <div class="about-cards reveal in-scale" id="aboutCards">
+                <!-- Card A: starts as small (inactive), becomes normal when active -->
+                <div class="about-card about-card--normal" data-card="a">
+                  <div class="about-card-inner">
+                    <img src="src/assets/room_1.jpeg" alt="Premium Rooms" />
+                    <div class="about-card-gradient"></div>
+                    <div class="about-card-content">
+                      <div class="about-card-tag">Premium Rooms</div>
+                      <div class="about-card-title-wrap">
+                        <h3 class="about-card-title">Experience luxury with StayHaven's premium rooms designed for unforgettable stays.</h3>
+                      </div>
+                      <div class="about-card-footer">
+                        <div class="about-card-location">
+                          <span class="about-card-location-pin">📍</span>
+                          <p>Lagos, Nigeria</p>
+                        </div>
+                        <span class="about-card-arrow">↗</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="about-card-description">
+                    <p>Spacious interiors, plush bedding, and curated amenities — everything you need for a perfect getaway.</p>
+                  </div>
+                </div>
+                <!-- Card B -->
+                <div class="about-card about-card--small" data-card="b">
+                  <div class="about-card-inner">
+                    <img src="src/assets/gate.jpeg" alt="Deluxe" />
+                    <div class="about-card-gradient"></div>
+                    <div class="about-card-content">
+                      <div class="about-card-tag">Deluxe</div>
+                      <div class="about-card-title-wrap">
+                        <h3 class="about-card-title">Elegant spaces that blend modern comfort with timeless sophistication.</h3>
+                      </div>
+                      <div class="about-card-footer">
+                        <div class="about-card-location">
+                          <span class="about-card-location-pin">📍</span>
+                          <p>Abuja, Nigeria</p>
+                        </div>
+                        <span class="about-card-arrow">↗</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="about-card-description">
+                    <p>Experience the epitome of comfort and style with StayHaven's deluxe accommodations, where every detail is designed to elevate your stay.</p>
+                  </div>
+                </div>
+              </div>
+              <div class="about-controls reveal">
+                <button class="control-btn" id="aboutPrev">←</button>
+                <button class="control-btn control-btn--active" id="aboutNext">→</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════════════
+             FACILITIES
+             ═════════════════════════════════════════════════════════ -->
+        <section class="facilities" id="facilities">
+          <div class="facilities-head">
+            <div class="facilities-head-left">
+              <div class="pill reveal">Facilities</div>
+              <h3 class="facilities-title reveal">Checkout Premium Stays</h3>
+            </div>
+            <div class="facilities-head-right reveal">
+              <a href="#" class="btn">
+                View More
+                <span class="arrow-wrap">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </span>
+              </a>
+            </div>
+          </div>
+
+          <div class="facilities-slider reveal" id="facilitiesSlider">
+            <!-- Room cards — matching seeded room types + prices -->
+            <div class="room-card-outer">
+              <a href="#" class="room-card">
+                <img src="public/room_2.jpeg" alt="Standard" />
+                <div class="room-card-gradient"></div>
+                <div class="room-card-content">
+                  <div class="room-card-top">
+                    <div class="heart-btn">♥</div>
+                    <div class="pill-inverse">₦65,000 / night</div>
+                  </div>
+                  <div class="room-card-bottom">
+                    <div class="room-card-info">
+                      <div class="pill-inverse">Best Value</div>
+                      <h3>Standard</h3>
+                    </div>
+                    <div class="arrow-round">↗</div>
+                  </div>
+                </div>
+              </a>
+            </div>
+            <div class="room-card-outer">
+              <a href="#" class="room-card">
+                <img src="public/room_4.jpg" alt="Deluxe" />
+                <div class="room-card-gradient"></div>
+                <div class="room-card-content">
+                  <div class="room-card-top">
+                    <div class="heart-btn">♥</div>
+                    <div class="pill-inverse">₦115,000 / night</div>
+                  </div>
+                  <div class="room-card-bottom">
+                    <div class="room-card-info">
+                      <div class="pill-inverse">Most Popular</div>
+                      <h3>Deluxe</h3>
+                    </div>
+                    <div class="arrow-round">↗</div>
+                  </div>
+                </div>
+              </a>
+            </div>
+            <div class="room-card-outer">
+              <a href="#" class="room-card">
+                <img src="public/room_6.jpeg" alt="Junior Suite" />
+                <div class="room-card-gradient"></div>
+                <div class="room-card-content">
+                  <div class="room-card-top">
+                    <div class="heart-btn">♥</div>
+                    <div class="pill-inverse">₦175,000 / night</div>
+                  </div>
+                  <div class="room-card-bottom">
+                    <div class="room-card-info">
+                      <div class="pill-inverse">Extended Stay</div>
+                      <h3>Junior Suite</h3>
+                    </div>
+                    <div class="arrow-round">↗</div>
+                  </div>
+                </div>
+              </a>
+            </div>
+            <div class="room-card-outer">
+              <a href="#" class="room-card">
+                <img src="public/room_7.jpeg" alt="Executive Suite" />
+                <div class="room-card-gradient"></div>
+                <div class="room-card-content">
+                  <div class="room-card-top">
+                    <div class="heart-btn">♥</div>
+                    <div class="pill-inverse">₦200,000 / night</div>
+                  </div>
+                  <div class="room-card-bottom">
+                    <div class="room-card-info">
+                      <div class="pill-inverse">Lounge Access</div>
+                      <h3>Executive Suite</h3>
+                    </div>
+                    <div class="arrow-round">↗</div>
+                  </div>
+                </div>
+              </a>
+            </div>
+            <div class="room-card-outer">
+              <a href="#" class="room-card">
+                <img src="public/room_9.jpeg" alt="Penthouse" />
+                <div class="room-card-gradient"></div>
+                <div class="room-card-content">
+                  <div class="room-card-top">
+                    <div class="heart-btn">♥</div>
+                    <div class="pill-inverse">₦250,000 / night</div>
+                  </div>
+                  <div class="room-card-bottom">
+                    <div class="room-card-info">
+                      <div class="pill-inverse">Top Floor</div>
+                      <h3>Penthouse</h3>
+                    </div>
+                    <div class="arrow-round">↗</div>
+                  </div>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <div class="facilities-footer reveal">
+            <div style="display: flex; gap: 12px;">
+              <button class="control-btn" id="facPrev">←</button>
+              <button class="control-btn control-btn--active" id="facNext">→</button>
+            </div>
+            <p class="facilities-footer-text">
+              Book your stay for a personalized experience. Explore our premium accommodations and enjoy a memorable stay with us.
+            </p>
+            <div class="facilities-footer-mobile" style="display:none;">
+              <a href="#" class="btn btn--sm">View More</a>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════════════
+             SERVICES (accordion)
+             ═════════════════════════════════════════════════════════ -->
+        <section class="services" id="services">
+          <div class="services-head">
+            <div class="pill reveal">Our Services →</div>
+            <h1 class="section-heading font-heading reveal">Quality Service, Unforgettable Stays</h1>
+            <p class="services-description reveal">We provide exceptional service to ensure your stay is memorable and enjoyable.</p>
+            <div class="reveal">
+              <a href="#" class="btn">
+                Explore More
+                <span class="arrow-wrap">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Desktop: accordion -->
+          <div class="services-grid reveal" id="servicesGrid">
+            <div class="service-card" data-index="0">
+              <img src="public/gym.jpeg" alt="Gym" />
+              <div class="service-card-gradient"></div>
+              <div class="service-card-collapsed"><div class="service-card-collapsed-inner"><p>Gym</p><h3>Where Wellness Meets Excellence</h3></div></div>
+              <div class="service-card-expanded">
+                <p class="tag">Gym</p>
+                <h3>Where Wellness Meets Excellence</h3>
+                <p class="desc">Stay on top of your fitness goals with our fully equipped gym featuring modern cardio and strength training equipment.</p>
+              </div>
+            </div>
+            <div class="service-card" data-index="1">
+              <img src="public/swimming_pool.jpeg" alt="Swimming Pool" />
+              <div class="service-card-gradient"></div>
+              <div class="service-card-collapsed"><div class="service-card-collapsed-inner"><p>Swimming Pool</p><h3>Jump In &amp; Refresh Your Senses</h3></div></div>
+              <div class="service-card-expanded">
+                <p class="tag">Swimming Pool</p>
+                <h3>Jump In &amp; Refresh Your Senses</h3>
+                <p class="desc">Take a dip in our temperature-controlled pool surrounded by lush greenery — perfect for relaxation or a morning swim.</p>
+              </div>
+            </div>
+            <div class="service-card active" data-index="2">
+              <img src="public/restaurant.jpeg" alt="Restaurant" />
+              <div class="service-card-gradient"></div>
+              <div class="service-card-collapsed"><div class="service-card-collapsed-inner"><p>Restaurant</p><h3>The Restaurant Hub</h3></div></div>
+              <div class="service-card-expanded">
+                <p class="tag">Restaurant</p>
+                <h3>The Restaurant Hub</h3>
+                <p class="desc">Savor culinary excellence at our restaurant, where every dish is crafted with passion and precision. Indulge in a symphony of flavors that will delight your senses.</p>
+              </div>
+            </div>
+            <div class="service-card" data-index="3">
+              <img src="public/pickup.jpeg" alt="Pick Up & Transfers" />
+              <div class="service-card-gradient"></div>
+              <div class="service-card-collapsed"><div class="service-card-collapsed-inner"><p>Pick Up &amp; Transfers</p><h3>Luxury Transfers, Effortless Travel</h3></div></div>
+              <div class="service-card-expanded">
+                <p class="tag">Pick Up &amp; Transfers</p>
+                <h3>Luxury Transfers, Effortless Travel</h3>
+                <p class="desc">Arrive in style with our premium airport pickup and transfer service. Professional drivers, luxury vehicles, seamless comfort.</p>
+              </div>
+            </div>
+            <div class="service-card" data-index="4">
+              <img src="public/parking_space.jpeg" alt="Parking Space" />
+              <div class="service-card-gradient"></div>
+              <div class="service-card-collapsed"><div class="service-card-collapsed-inner"><p>Parking Space</p><h3>Safe, Spacious, &amp; Always Available</h3></div></div>
+              <div class="service-card-expanded">
+                <p class="tag">Parking Space</p>
+                <h3>Safe, Spacious, &amp; Always Available</h3>
+                <p class="desc">Secure, well-lit parking with 24/7 surveillance and valet service — one less thing to worry about during your stay.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile: single card with dots -->
+          <div class="services-mobile reveal">
+            <div class="services-mobile-card" id="mobileServiceCard">
+              <img src="public/restaurant.jpeg" alt="Service" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />
+              <div class="service-card-gradient"></div>
+              <div class="service-card-expanded" style="opacity:1;">
+                <p class="tag" id="mobileSvcTag">Restaurant</p>
+                <h3 id="mobileSvcTitle">The Restaurant Hub</h3>
+                <p class="desc" id="mobileSvcDesc">Savor culinary excellence at our restaurant, where every dish is crafted with passion and precision.</p>
+              </div>
+            </div>
+            <div class="services-dots" id="serviceDots">
+              <button class="services-dot" data-i="0"></button>
+              <button class="services-dot" data-i="1"></button>
+              <button class="services-dot active" data-i="2"></button>
+              <button class="services-dot" data-i="3"></button>
+              <button class="services-dot" data-i="4"></button>
+            </div>
+            <div class="services-mobile-more">
+              <a href="#" class="btn">Explore More</a>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════════════
+             TESTIMONIALS
+             ═════════════════════════════════════════════════════════ -->
+        <section class="testimonials">
+          <div class="testimonials-stage">
+            <div class="testimonials-gallery reveal">
+              <div class="gallery-cell gallery-cell--0"><img src="public/room_2.jpeg" alt="" /></div>
+              <div class="gallery-cell gallery-cell--1"><img src="public/room_5.jpeg" alt="" /></div>
+              <div class="gallery-cell gallery-cell--2"><img src="public/room_7.jpeg" alt="" /></div>
+              <div class="gallery-cell gallery-cell--3"><img src="public/room_9.jpeg" alt="" /></div>
+              <div class="gallery-cell gallery-cell--4"><img src="public/room_3.jpeg" alt="" /></div>
+              <div class="gallery-cell gallery-cell--5"><img src="public/room_6.jpeg" alt="" /></div>
+              <div class="gallery-cell gallery-cell--6"><img src="public/room_8.jpeg" alt="" /></div>
+              <div class="gallery-cell gallery-cell--7"><img src="public/room_10.jpeg" alt="" /></div>
+            </div>
+            <div class="testimonial-card-wrap reveal">
+              <div class="testimonial-card">
+                <div class="pill" style="margin-bottom: 20px;">Testimonial</div>
+                <div class="testimonial-quote-icon">“</div>
+                <p class="testimonial-quote" id="testQuote">With our dedication and expertise in hospitality, we strive to provide stays that are not just accommodations, but a comforting journey toward relaxation and memorable experiences.</p>
+                <div class="testimonial-author">
+                  <img src="https://i.pravatar.cc/150?img=11" alt="" id="testAvatar" />
+                  <div>
+                    <p class="name" id="testName">Aitan Mohammed</p>
+                    <p class="role" id="testRole">Product Manager at Y5 Studio</p>
+                  </div>
+                </div>
+                <div class="testimonial-dots" id="testDots">
+                  <button class="testimonial-dot active" data-i="0"></button>
+                  <button class="testimonial-dot" data-i="1"></button>
+                  <button class="testimonial-dot" data-i="2"></button>
+                  <button class="testimonial-dot" data-i="3"></button>
+                  <button class="testimonial-dot" data-i="4"></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-controls reveal">
+            <button class="control-btn" id="testPrev">←</button>
+            <button class="control-btn control-btn--active" id="testNext">→</button>
+          </div>
+        </section>
+
+        <!-- ═════════════════════════════════════════════════════════
+             PROMOS
+             ═════════════════════════════════════════════════════════ -->
+        <section class="promos">
+          <div class="promos-head">
+            <div class="promos-head-inner">
+              <div class="pill reveal">Promotions →</div>
+              <h2 class="promos-heading font-heading reveal">Get promo for a cheaper price</h2>
+              <p class="promos-subtitle reveal">Discover exclusive deals and limited-time offers designed to help you save on your next getaway</p>
+            </div>
+            <div class="promos-see-all-desktop reveal">
+              <a href="#" class="btn">
+                See All
+                <span class="arrow-wrap">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </span>
+              </a>
+            </div>
+          </div>
+
+          <div class="promos-grid">
+            <div class="promo-card promo-card--blue reveal in-scale">
+              <div class="promo-circle-1"></div><div class="promo-circle-2"></div>
+              <div class="promo-top">
+                <span class="promo-badge promo-badge--amber">Limited Time</span>
+                <div class="promo-discount">
+                  <span>Save up to</span><span>25%</span><span>OFF</span>
+                </div>
+              </div>
+              <div class="promo-content">
+                <h3>First Stay Discount</h3>
+                <p class="desc">New to StayHaven? Enjoy 25% off your first booking on any room type. No minimum stay required.</p>
+                <p class="terms">*Valid for new accounts only. Cannot be combined with other offers.</p>
+              </div>
+            </div>
+            <div class="promo-card promo-card--night reveal in-scale">
+              <div class="promo-circle-1"></div><div class="promo-circle-2"></div>
+              <div class="promo-top">
+                <span class="promo-badge promo-badge--emerald">Weekend Special</span>
+                <div class="promo-discount">
+                  <span>Save up to</span><span>30%</span><span>OFF</span>
+                </div>
+              </div>
+              <div class="promo-content">
+                <h3>Weekend Getaway Deal</h3>
+                <p class="desc">Book a Friday–Sunday stay and save 30% on Deluxe rooms and above. Breakfast included.</p>
+                <p class="terms">*Valid on weekends through Dec 2026. Subject to availability.</p>
+              </div>
+            </div>
+            <div class="promo-card promo-card--amber reveal in-scale">
+              <div class="promo-circle-1"></div><div class="promo-circle-2"></div>
+              <div class="promo-top">
+                <span class="promo-badge promo-badge--yellow">Loyalty Exclusive</span>
+                <div class="promo-discount">
+                  <span>Save up to</span><span>40%</span><span>OFF</span>
+                </div>
+              </div>
+              <div class="promo-content">
+                <h3>Gold &amp; Platinum Perk</h3>
+                <p class="desc">Our most loyal guests deserve the best. Unlock 40% off suite upgrades with your Gold or Platinum membership.</p>
+                <p class="terms">*Gold &amp; Platinum members only. Upgrade subject to availability.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="promos-see-all-mobile">
+            <a href="#" class="btn">See All Promos</a>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ═════════════════════════════════════════════════════════
+         FOOTER
+         ═════════════════════════════════════════════════════════ -->
+    <footer class="footer">
+      <div class="footer-big">
+        <div class="footer-big-bg">
+          <div class="bg-cell"><img src="public/room_3.jpeg" alt="" /></div>
+          <div class="bg-cell"><img src="public/room_5.jpeg" alt="" /></div>
+          <div class="bg-cell"><img src="public/room_8.jpeg" alt="" /></div>
+          <div class="bg-cell"><img src="public/room_10.jpeg" alt="" /></div>
+        </div>
+        <div class="footer-big-text">
+          <h2>Stay<span>Haven</span></h2>
+        </div>
+      </div>
+      <div class="footer-links">
+        <div class="footer-links-row">
+          <div class="footer-group">
+            <h4>About us ↗</h4>
+            <ul>
+              <li><a href="#">Our Story</a></li>
+              <li><a href="#">Careers</a></li>
+              <li><a href="#">Press</a></li>
+            </ul>
+          </div>
+          <div class="footer-group">
+            <h4>FAQ ↗</h4>
+            <ul>
+              <li><a href="#">Booking</a></li>
+              <li><a href="#">Cancellation</a></li>
+              <li><a href="#">Payments</a></li>
+            </ul>
+          </div>
+          <div class="footer-group">
+            <h4>Contact us ↗</h4>
+            <ul>
+              <li><a href="#">Support</a></li>
+              <li><a href="#">Partnerships</a></li>
+              <li><a href="#">Feedback</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-quote">
+          <p>“With our dedication and expertise in hospitality, we strive to offer stays that go beyond just a room, providing a comforting journey toward relaxation and unforgettable experiences.”</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-bottom-inner">
+          <div class="footer-bottom-left">
+            <div class="footer-bottom-logo">
+              <img src="src/assets/logo-inverted.png" alt="" />
+              <span>StayHaven</span>
+            </div>
+            <span class="footer-divider">|</span>
+            <span class="footer-helpline">Helpline: +234 800 STAYHAVEN</span>
+          </div>
+          <div class="footer-socials">
+            <a href="#" class="footer-social" aria-label="Facebook">f</a>
+            <a href="#" class="footer-social" aria-label="Twitter">𝕏</a>
+            <a href="#" class="footer-social" aria-label="Instagram">◯</a>
+          </div>
+          <p class="footer-copy">&copy; <span id="copyYear">2026</span> StayHaven. All Rights Reserved.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // ════════════════════════════════════════════════════════
+    // 1) Navbar mobile toggle
+    // ════════════════════════════════════════════════════════
+    (function () {
+      var toggle = document.getElementById('mobileNavToggle');
+      var nav = document.getElementById('mobileNav');
+      if (!toggle || !nav) return;
+      toggle.addEventListener('click', function () {
+        nav.classList.toggle('open');
+      });
+    })();
+
+    // ════════════════════════════════════════════════════════
+    // 2) Hero search bar mobile toggle
+    // ════════════════════════════════════════════════════════
+    (function () {
+      var toggle = document.getElementById('mobileToggle');
+      if (!toggle) return;
+      toggle.addEventListener('click', function () {
+        var expanded = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', String(!expanded));
+      });
+    })();
+
+    // ════════════════════════════════════════════════════════
+    // 3) Reveal-on-scroll with IntersectionObserver
+    // ════════════════════════════════════════════════════════
+    (function () {
+      var targets = document.querySelectorAll('.reveal');
+      if (!('IntersectionObserver' in window)) {
+        targets.forEach(function (t) { t.classList.add('in'); });
+        return;
+      }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      targets.forEach(function (t) { io.observe(t); });
+    })();
+
+    // ════════════════════════════════════════════════════════
+    // 4) About Us: swap which card is "normal" vs "small"
+    // ════════════════════════════════════════════════════════
+    (function () {
+      var cards = document.querySelectorAll('#aboutCards .about-card');
+      if (cards.length !== 2) return;
+      var prevBtn = document.getElementById('aboutPrev');
+      var nextBtn = document.getElementById('aboutNext');
+
+      function swap() {
+        cards.forEach(function (c) {
+          c.classList.toggle('about-card--normal');
+          c.classList.toggle('about-card--small');
+        });
+        prevBtn.classList.toggle('control-btn--active');
+        nextBtn.classList.toggle('control-btn--active');
+      }
+      prevBtn.addEventListener('click', swap);
+      nextBtn.addEventListener('click', swap);
+    })();
+
+    // ════════════════════════════════════════════════════════
+    // 5) Facilities: horizontal scroll with nav buttons
+    // ════════════════════════════════════════════════════════
+    (function () {
+      var slider = document.getElementById('facilitiesSlider');
+      var prev = document.getElementById('facPrev');
+      var next = document.getElementById('facNext');
+      if (!slider || !prev || !next) return;
+
+      function scrollBy(dir) {
+        var first = slider.querySelector(':scope > *');
+        var cardW = first ? first.clientWidth : 300;
+        slider.scrollBy({ left: dir * (cardW + 24) * 2, behavior: 'smooth' });
+      }
+      function updateState() {
+        var canLeft = slider.scrollLeft > 0;
+        var canRight = slider.scrollLeft + slider.clientWidth < slider.scrollWidth - 2;
+        prev.classList.toggle('control-btn--active', canLeft);
+        next.classList.toggle('control-btn--active', canRight);
+        prev.disabled = !canLeft;
+        next.disabled = !canRight;
+      }
+      prev.addEventListener('click', function () { scrollBy(-1); });
+      next.addEventListener('click', function () { scrollBy(1); });
+      slider.addEventListener('scroll', updateState, { passive: true });
+      window.addEventListener('resize', updateState);
+      updateState();
+    })();
+
+    // ════════════════════════════════════════════════════════
+    // 6) Services: hover-to-expand on desktop
+    // ════════════════════════════════════════════════════════
+    (function () {
+      var cards = document.querySelectorAll('#servicesGrid .service-card');
+      cards.forEach(function (card) {
+        card.addEventListener('mouseenter', function () {
+          cards.forEach(function (c) { c.classList.remove('active'); });
+          card.classList.add('active');
+        });
+      });
+    })();
+
+    // ════════════════════════════════════════════════════════
+    // 7) Services mobile: dots + swipe
+    // ════════════════════════════════════════════════════════
+    (function () {
+      var services = [
+        { tag: 'Gym', title: 'Where Wellness Meets Excellence', desc: 'Stay on top of your fitness goals with our fully equipped gym featuring modern cardio and strength training equipment.', img: 'public/gym.jpeg' },
+        { tag: 'Swimming Pool', title: 'Jump In & Refresh Your Senses', desc: 'Take a dip in our temperature-controlled pool surrounded by lush greenery — perfect for relaxation or a morning swim.', img: 'public/swimming_pool.jpeg' },
+        { tag: 'Restaurant', title: 'The Restaurant Hub', desc: 'Savor culinary excellence at our restaurant, where every dish is crafted with passion and precision.', img: 'public/restaurant.jpeg' },
+        { tag: 'Pick Up & Transfers', title: 'Luxury Transfers, Effortless Travel', desc: 'Arrive in style with our premium airport pickup and transfer service.', img: 'public/pickup.jpeg' },
+        { tag: 'Parking Space', title: 'Safe, Spacious, & Always Available', desc: 'Secure, well-lit parking with 24/7 surveillance and valet service — one less thing to worry about during your stay.', img: 'public/parking_space.jpeg' }
+      ];
+      var card = document.getElementById('mobileServiceCard');
+      var dots = document.querySelectorAll('#serviceDots .services-dot');
+      var tag = document.getElementById('mobileSvcTag');
+      var title = document.getElementById('mobileSvcTitle');
+      var desc = document.getElementById('mobileSvcDesc');
+      var i = 2;
+      function render() {
+        var s = services[i];
+        card.querySelector('img').src = s.img;
+        tag.textContent = s.tag;
+        title.textContent = s.title;
+        desc.textContent = s.desc;
+        dots.forEach(function (d, idx) { d.classList.toggle('active', idx === i); });
+      }
+      dots.forEach(function (d) {
+        d.addEventListener('click', function () { i = parseInt(d.dataset.i, 10); render(); });
+      });
+      var startX = 0, endX = 0;
+      card.addEventListener('touchstart', function (e) { startX = e.touches[0].clientX; }, { passive: true });
+      card.addEventListener('touchmove', function (e) { endX = e.touches[0].clientX; }, { passive: true });
+      card.addEventListener('touchend', function () {
+        var diff = startX - endX;
+        if (Math.abs(diff) < 50) return;
+        if (diff > 0 && i < services.length - 1) i++;
+        else if (diff < 0 && i > 0) i--;
+        render();
+      });
+    })();
+
+    // ════════════════════════════════════════════════════════
+    // 8) Testimonials: rotate every 6s + dots + arrows
+    // ════════════════════════════════════════════════════════
+    (function () {
+      var testimonials = [
+        { name: 'Aitan Mohammed', role: 'Product Manager at Y5 Studio', avatar: 'https://i.pravatar.cc/150?img=11', quote: 'With our dedication and expertise in hospitality, we strive to provide stays that are not just accommodations, but a comforting journey toward relaxation and memorable experiences.' },
+        { name: 'Chioma Okafor', role: 'Travel Blogger & Content Creator', avatar: 'https://i.pravatar.cc/150?img=5', quote: 'StayHaven exceeded every expectation. From the seamless check-in to the impeccable room service, every detail was thoughtfully curated. This is hospitality at its finest.' },
+        { name: 'David Adeyemi', role: 'CEO at NovaTech Solutions', avatar: 'https://i.pravatar.cc/150?img=12', quote: 'I travel frequently for business, and StayHaven has become my go-to. The executive suites are perfect for working remotely, and the concierge team is phenomenal.' },
+        { name: 'Fatima Bello', role: 'Interior Designer', avatar: 'https://i.pravatar.cc/150?img=9', quote: "As a designer, I notice every detail — and StayHaven's interiors are stunning. The blend of modern luxury with warm, welcoming spaces is truly world-class." },
+        { name: 'James Okonkwo', role: 'Frequent Guest & Platinum Member', avatar: 'https://i.pravatar.cc/150?img=7', quote: "Three years and counting. The loyalty program is genuinely rewarding, and the staff remember your preferences. It feels like coming home every time." }
+      ];
+      var active = 0;
+      var quote = document.getElementById('testQuote');
+      var avatar = document.getElementById('testAvatar');
+      var name = document.getElementById('testName');
+      var role = document.getElementById('testRole');
+      var dots = document.querySelectorAll('#testDots .testimonial-dot');
+
+      function render() {
+        var t = testimonials[active];
+        quote.style.opacity = '0';
+        setTimeout(function () {
+          quote.textContent = t.quote;
+          avatar.src = t.avatar;
+          name.textContent = t.name;
+          role.textContent = t.role;
+          dots.forEach(function (d, i) { d.classList.toggle('active', i === active); });
+          quote.style.opacity = '1';
+        }, 150);
+      }
+      dots.forEach(function (d) {
+        d.addEventListener('click', function () { active = parseInt(d.dataset.i, 10); render(); });
+      });
+      document.getElementById('testPrev').addEventListener('click', function () {
+        active = (active - 1 + testimonials.length) % testimonials.length; render();
+      });
+      document.getElementById('testNext').addEventListener('click', function () {
+        active = (active + 1) % testimonials.length; render();
+      });
+      setInterval(function () {
+        active = (active + 1) % testimonials.length; render();
+      }, 6000);
+    })();
+
+    // ════════════════════════════════════════════════════════
+    // 9) Footer copyright year
+    // ════════════════════════════════════════════════════════
+    document.getElementById('copyYear').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

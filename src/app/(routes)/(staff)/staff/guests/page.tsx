@@ -463,7 +463,7 @@ function GuestDetailPanel({
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <StatusBadge status={b.status} />
-                      <p className="text-foreground text-xs font-semibold">${Number(b.totalAmount).toFixed(2)}</p>
+                      <p className="text-foreground text-xs font-semibold">₦{Number(b.totalAmount).toLocaleString()}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-2">

@@ -84,7 +84,9 @@ export const POST = withAuth(
             email: booking.guest.email,
             amount: amountInKobo,
             reference,
-            callback_url: `${process.env.CLIENT_URL}/book/confirmed?bookingId=${bookingId}`,
+            // Paystack opens in a popup and the parent tab polls /payments/status
+            // for the outcome, so this redirect just closes the popup window.
+            callback_url: `${process.env.CLIENT_URL}/payment/close`,
             metadata: {
               bookingId,
               bookingRef: booking.bookingRef,

@@ -254,12 +254,12 @@ const RoomTypeGrid = ({ selectedType, checkIn, checkOut, guests, sortBy }: Props
                 <div className="text-right shrink-0 ml-3">
                   {hasDates && rt.totalAmount ? (
                     <>
-                      <p className="text-foreground font-bold text-lg">${rt.totalAmount.toFixed(0)}</p>
+                      <p className="text-foreground font-bold text-lg">₦{rt.totalAmount.toLocaleString()}</p>
                       <p className="text-foreground-tertiary text-xs">total / {rt.totalNights} night{rt.totalNights !== 1 ? 's' : ''}</p>
                     </>
                   ) : (
                     <>
-                      <p className="text-foreground font-bold text-lg">${Number(rt.basePrice).toFixed(0)}</p>
+                      <p className="text-foreground font-bold text-lg">₦{Number(rt.basePrice).toLocaleString()}</p>
                       <p className="text-foreground-tertiary text-xs">/ night</p>
                     </>
                   )}
@@ -269,9 +269,9 @@ const RoomTypeGrid = ({ selectedType, checkIn, checkOut, guests, sortBy }: Props
               {/* Per-night breakdown when dates are set */}
               {hasDates && rt.baseAmount && rt.taxAmount && (
                 <div className="flex gap-3 text-[11px] text-foreground-tertiary mb-3">
-                  <span>${rt.baseAmount.toFixed(0)} base</span>
+                  <span>₦{rt.baseAmount.toLocaleString()} base</span>
                   <span>+</span>
-                  <span>${rt.taxAmount.toFixed(0)} tax</span>
+                  <span>₦{rt.taxAmount.toLocaleString()} tax</span>
                   {Number(rt.weekendMultiplier) > 1 && (
                     <>
                       <span className="text-warning">incl. weekend rates</span>

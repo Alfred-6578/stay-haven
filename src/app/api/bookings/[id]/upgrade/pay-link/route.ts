@@ -72,7 +72,7 @@ export const POST = withAuth<{ id: string }>(
             email: upgrade.booking.guest.email,
             amount: Math.round(Number(pending.amount) * 100),
             reference: pending.reference,
-            callback_url: `${process.env.CLIENT_URL}/bookings/${upgrade.booking.id}`,
+            callback_url: `${process.env.CLIENT_URL}/payment/close`,
             metadata: {
               type: "UPGRADE",
               upgradeRequestId: upgrade.id,

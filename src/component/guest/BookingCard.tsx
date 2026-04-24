@@ -74,7 +74,7 @@ const BookingCard = ({ booking }: Props) => {
         </div>
 
         <div className="flex items-center justify-between">
-          <p className="text-foreground font-bold text-sm">${Number(booking.totalAmount).toFixed(0)}</p>
+          <p className="text-foreground font-bold text-sm">₦{Number(booking.totalAmount).toLocaleString()}</p>
           <span className="text-foreground-tertiary text-xs flex items-center gap-1 group-hover:text-foreground group-hover:gap-2 transition-all">
             View Details
             <HiOutlineArrowRight size={12} />

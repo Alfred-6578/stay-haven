@@ -270,21 +270,21 @@ export default function BookingDetailPage() {
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex justify-between text-foreground-secondary">
                 <span>Base amount</span>
-                <span>${Number(booking.baseAmount).toFixed(0)}</span>
+                <span>₦{Number(booking.baseAmount).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-foreground-secondary">
                 <span>{TAX_LABEL}</span>
-                <span>${Number(booking.taxAmount).toFixed(0)}</span>
+                <span>₦{Number(booking.taxAmount).toLocaleString()}</span>
               </div>
               {Number(booking.discountAmount) > 0 && (
                 <div className="flex justify-between text-success">
                   <span>Loyalty discount ({booking.pointsUsed} pts)</span>
-                  <span>-${Number(booking.discountAmount).toFixed(0)}</span>
+                  <span>-₦{Number(booking.discountAmount).toLocaleString()}</span>
                 </div>
               )}
               <div className="flex justify-between text-foreground font-bold text-base pt-2 border-t border-border mt-1">
                 <span>Total</span>
-                <span>${Number(booking.totalAmount).toFixed(0)}</span>
+                <span>₦{Number(booking.totalAmount).toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -305,13 +305,13 @@ export default function BookingDetailPage() {
                 {booking.roomServiceOrders.map(o => (
                   <div key={o.id} className="flex justify-between text-sm py-2 border-b border-border last:border-0">
                     <span className="text-foreground-secondary">Room Service</span>
-                    <span className="text-foreground font-medium">${Number(o.totalAmount).toFixed(0)} &middot; {o.status}</span>
+                    <span className="text-foreground font-medium">₦{Number(o.totalAmount).toLocaleString()} &middot; {o.status}</span>
                   </div>
                 ))}
                 {booking.serviceBookings.map(s => (
                   <div key={s.id} className="flex justify-between text-sm py-2 border-b border-border last:border-0">
                     <span className="text-foreground-secondary">{s.service.name}</span>
-                    <span className="text-foreground font-medium">${Number(s.amount).toFixed(0)} &middot; {s.status}</span>
+                    <span className="text-foreground font-medium">₦{Number(s.amount).toLocaleString()} &middot; {s.status}</span>
                   </div>
                 ))}
               </div>
@@ -338,7 +338,7 @@ export default function BookingDetailPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-foreground-tertiary">Amount</span>
-                  <span className="text-foreground font-medium">${Number(booking.payment.amount).toFixed(0)}</span>
+                  <span className="text-foreground font-medium">₦{Number(booking.payment.amount).toLocaleString()}</span>
                 </div>
               </div>
             ) : (

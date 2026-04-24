@@ -73,7 +73,7 @@ export const POST = withAuth<{ id: string }>(
             email: extension.booking.guest.email,
             amount: Math.round(Number(pending.amount) * 100),
             reference: pending.reference,
-            callback_url: `${process.env.CLIENT_URL}/bookings/${extension.booking.id}`,
+            callback_url: `${process.env.CLIENT_URL}/payment/close`,
             metadata: {
               type: "EXTENSION",
               extensionId: extension.id,
