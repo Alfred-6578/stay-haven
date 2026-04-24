@@ -107,17 +107,17 @@ const BookingStepPayment = ({
         <div className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between text-foreground-secondary">
             <span>{isGroup ? `${roomIds.length} rooms` : 'Room total'}</span>
-            <span>${totalAmount.toFixed(0)}</span>
+            <span>₦{totalAmount.toLocaleString()}</span>
           </div>
           {discount > 0 && (
             <div className="flex justify-between text-success">
               <span>Loyalty discount ({pointsUsed} pts)</span>
-              <span>-${discount.toFixed(0)}</span>
+              <span>-₦{discount.toLocaleString()}</span>
             </div>
           )}
           <div className="flex justify-between text-foreground font-bold text-lg pt-3 border-t border-border mt-1">
             <span>Amount to pay</span>
-            <span>${finalAmount.toFixed(0)}</span>
+            <span>₦{finalAmount.toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -129,7 +129,7 @@ const BookingStepPayment = ({
       )}
 
       <Button onClick={handlePay} loading={loading} fullWidth size="lg">
-        Pay ${finalAmount.toFixed(0)} with Paystack
+        Pay ₦{finalAmount.toLocaleString()} with Paystack
       </Button>
 
       <div className="flex flex-col gap-2.5 mt-6">

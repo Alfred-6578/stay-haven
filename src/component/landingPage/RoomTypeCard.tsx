@@ -30,7 +30,7 @@ const RoomTypeCard = ({ image, tag, title, price, slug }: Props) => {
               <GoHeartFill />
             </div>
             <Pill className="px-3! text-foreground-inverse">
-              ${price.toFixed(2)} / night
+              ₦{price.toLocaleString()} / night
             </Pill>
           </div>
           <div className="flex items-start justify-between bg-foreground-inverse/30 backdrop-blur rounded-2xl p-3">

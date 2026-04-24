@@ -84,7 +84,7 @@ export const POST = withAuth(
             email: booking.guest.email,
             amount: amountInKobo,
             reference,
-            callback_url: `${process.env.CLIENT_URL}/bookings/${bookingId}`,
+            callback_url: `${process.env.CLIENT_URL}/payment/close`,
             metadata: {
               type: "ROOM_SERVICE",
               bookingId,

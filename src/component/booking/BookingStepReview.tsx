@@ -97,7 +97,7 @@ const BookingStepReview = ({
                 {rooms.map(r => (
                   <li key={r.number} className="flex justify-between">
                     <span className="text-foreground">Room {r.number} · Floor {r.floor}</span>
-                    <span className="text-foreground-secondary">${r.totalAmount.toFixed(0)}</span>
+                    <span className="text-foreground-secondary">₦{r.totalAmount.toLocaleString()}</span>
                   </li>
                 ))}
               </ul>
@@ -115,26 +115,26 @@ const BookingStepReview = ({
           {weekdayNights > 0 && (
             <div className="flex justify-between text-sm text-foreground-secondary mb-2">
               <span>{weekdayNights} weekday night{weekdayNights !== 1 ? 's' : ''}{isGroup ? ` × ${rooms.length} rooms` : ''}</span>
-              <span>${(nightBreakdown.filter(n => !n.isWeekend).reduce((s, n) => s + n.price, 0) * rooms.length).toFixed(0)}</span>
+              <span>₦{(nightBreakdown.filter(n => !n.isWeekend).reduce((s, n) => s + n.price, 0) * rooms.length).toLocaleString()}</span>
             </div>
           )}
           {weekendNights > 0 && (
             <div className="flex justify-between text-sm mb-2">
               <span className="text-warning">{weekendNights} weekend night{weekendNights !== 1 ? 's' : ''}{isGroup ? ` × ${rooms.length} rooms` : ''}</span>
-              <span className="text-warning">${(nightBreakdown.filter(n => n.isWeekend).reduce((s, n) => s + n.price, 0) * rooms.length).toFixed(0)}</span>
+              <span className="text-warning">₦{(nightBreakdown.filter(n => n.isWeekend).reduce((s, n) => s + n.price, 0) * rooms.length).toLocaleString()}</span>
             </div>
           )}
           <div className="flex justify-between text-sm text-foreground-secondary pt-2 border-t border-border mt-2 mb-2">
             <span>Subtotal</span>
-            <span>${baseAmount.toFixed(0)}</span>
+            <span>₦{baseAmount.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-sm text-foreground-secondary mb-2">
             <span>{TAX_LABEL}</span>
-            <span>${taxAmount.toFixed(0)}</span>
+            <span>₦{taxAmount.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-foreground font-bold text-lg pt-3 border-t border-border mt-2">
             <span>Total</span>
-            <span>${totalAmount.toFixed(0)}</span>
+            <span>₦{totalAmount.toLocaleString()}</span>
           </div>
         </div>
       </div>
