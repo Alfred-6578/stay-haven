@@ -9,6 +9,13 @@ import { useAuth } from '@/context/AuthContext'
 import { useGoogleLogin } from '@react-oauth/google'
 import { FcGoogle } from 'react-icons/fc'
 
+const DEMO_ACCOUNTS = [
+    { label: 'Admin', email: 'admin@stayhaven.com', password: 'Admin@123' },
+    { label: 'Manager', email: 'manager@stayhaven.com', password: 'Manager@123' },
+    { label: 'Staff', email: 'staff@stayhaven.com', password: 'Staff@123' },
+    { label: 'Guest', email: 'testuser123@gmail.com', password: 'Testuser@123' },
+]
+
 const LoginForm = () => {
     const [showPassword, setShowPassword] = useState(false)
     const [email, setEmail] = useState('')
@@ -33,13 +40,12 @@ const LoginForm = () => {
         }
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+    const signIn = async (emailValue: string, passwordValue: string) => {
         setError('')
         setLoading(true)
 
         try {
-            const user = await login(email, password)
+            const user = await login(emailValue, passwordValue)
             navigateAfterAuth(user.role)
         } catch (err: unknown) {
             const message =
@@ -49,6 +55,18 @@ const LoginForm = () => {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        await signIn(email, password)
+    }
+
+    const handleDemoLogin = async (demo: { email: string; password: string }) => {
+        if (loading || googleLoading) return
+        setEmail(demo.email)
+        setPassword(demo.password)
+        await signIn(demo.email, demo.password)
     }
 
     const handleGoogleLogin = useGoogleLogin({
@@ -81,6 +99,29 @@ const LoginForm = () => {
                     Enter your credentials to continue your stay journey
                 </p>
             </div>
+            {/* Demo logins — one click to sign in as each role */}
+            <div className="border border-border rounded-md p-3 mb-6 bg-foreground-disabled/5">
+                <p className="text-foreground-tertiary text-[11px] font-semibold uppercase tracking-wide mb-2">
+                    Demo logins for recruiters
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                    {DEMO_ACCOUNTS.map((demo) => (
+                        <button
+                            key={demo.label}
+                            type="button"
+                            onClick={() => handleDemoLogin(demo)}
+                            disabled={loading || googleLoading}
+                            className="border border-border rounded-md py-2 px-3 text-sm font-medium text-foreground hover:bg-foreground hover:text-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {demo.label}
+                        </button>
+                    ))}
+                </div>
+                <p className="text-foreground-secondary text-[11px] mt-2">
+                    Click a role to sign in instantly — no typing needed.
+                </p>
+            </div>
+
             {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md p-3 mb-4">
                     {error}
